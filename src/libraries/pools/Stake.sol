@@ -46,12 +46,12 @@ library Stake {
             return _self.totalUnclaimed;
         }
 
-        uint256 _distributedAmount =
+        uint256 _amountToDistribute =
             _currentAccumulatedWeight
                 .sub(_lastAccumulatedWeight)
                 .mul(_self.totalDeposited)
                 .decode();
 
-        return _self.totalUnclaimed + _distributedAmount;
+        return _self.totalUnclaimed + _amountToDistribute;
     }
 }

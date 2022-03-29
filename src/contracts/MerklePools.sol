@@ -316,6 +316,10 @@ contract MerklePools is ReentrancyGuard {
         emit LPTokensGenerated(balanceAfter - balanceBefore);
         // TODO: should we burn any "extra TIC" not consumed here? TIC has no burn, 
         // so we would have to send to 0x0...
+
+
+        // TODO: we now need to update globally against the claimable TIC total...
+        // we should track this and subtract from that global?
     }
 
     /**
