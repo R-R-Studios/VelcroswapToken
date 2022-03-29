@@ -69,13 +69,13 @@ module.exports = {
       fuji: process.env.FUJI_GOVERNANCE_ADDRESS,
       avalanche: process.env.AVAX_GOVERNANCE_ADDRESS,
     },
-    liquidityProvider2: {
+    staker1: {
       default: 2,
     },
-    trader1: {
+    staker2: {
       default: 3,
     },
-    trader2: {
+    staker3: {
       default: 4,
     },
     feeRecipient: {

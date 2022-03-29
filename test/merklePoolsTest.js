@@ -78,6 +78,9 @@ describe("MerklePools", () => {
     //grant merkle pool minter role
     const minterRole = await ticToken.MINTER_ROLE();
     await ticToken.grantRole(minterRole, merklePools.address);
+
+    // grant the minter role to account[0] so we can mint tokens freely for tests
+    await ticToken.grantRole(minterRole, accounts[0].address);
   });
 
   describe("constructor", () => {
@@ -90,7 +93,7 @@ describe("MerklePools", () => {
   });
 
   describe("generateLPTokens", () => {
-    it.only("Can mint LP tokens", async() => {
+    it("Can mint LP tokens", async() => {
       // clean start
       expect(await usdcToken.balanceOf(exchange.address)).to.eq(0);
       expect(await ticToken.balanceOf(exchange.address)).to.eq(0);
@@ -116,4 +119,33 @@ describe("MerklePools", () => {
       // add test to ensure we can add LP tokens now that initial price has been established.
     })
   })
+
+  describe("deposit", () => {
+    it.only("Handles 1 staker in 1 pools correctly", async () => {
+      const staker1 = accounts[2];
+
+      // fresh wallet
+      expect(await ticToken.balanceOf(staker1.address)).to.eq(0);
+
+      // transfer in TIC
+      const initialTIC = ethers.utils.parseUnits("100", 18); 
+      await ticToken.mint(staker1.address, initialTIC);
+      expect(await ticToken.balanceOf(staker1.address)).to.eq(initialTIC);
+
+      // stake tic
+      await ticToken.connect(staker1).approve(merklePools.address, initialTIC);
+      await merklePools.connect(staker1).deposit(0, initialTIC);
+
+      expect(await merklePools.getPoolTotalDeposited(0)).to.eq(initialTIC);
+      expect(await merklePools.getStakeTotalDeposited(staker1.address, 0)).to.eq(initialTIC);
+      expect(await merklePools.getStakeTotalUnclaimed(staker1.address, 0)).to.eq(0);
+
+      console.log(await merklePools.getPool(0));
+
+
+    });
+
+  });
+
+
 });

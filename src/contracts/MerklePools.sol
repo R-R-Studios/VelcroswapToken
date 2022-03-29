@@ -316,8 +316,9 @@ contract MerklePools is ReentrancyGuard {
           address(this),
           _expirationTimestamp
         );
-        uint256 balanceAfter = elasticLPToken.balanceOf(address(this));
-        emit LPTokensGenerated(balanceAfter - balanceBefore);
+        uint256 balanceCreated = elasticLPToken.balanceOf(address(this)) - balanceBefore;
+        require(balanceCreated != 0, "MerklePools: NO_LP_CREATED");
+        emit LPTokensGenerated(balanceCreated);
         // TODO: should we burn any "extra TIC" not consumed here? TIC has no burn, 
         // so we would have to send to 0x0...
 
@@ -413,6 +414,15 @@ contract MerklePools is ReentrancyGuard {
     function getPoolToken(uint256 _poolId) external view returns (IERC20) {
         Pool.Data storage _pool = _pools.get(_poolId);
         return _pool.token;
+    }
+
+    /**
+     * @dev Gets the pool data struct 
+     * @param _poolId the identifier of the pool. 
+     * @return the Pool.Data (memory, not storage!).
+     */
+    function getPool(uint256 _poolId) external view returns (Pool.Data memory) {
+      return _pools.get(_poolId);
     }
 
     /**
