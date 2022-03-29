@@ -1,21 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.11;
+pragma solidity 0.8.4;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {
-    ReentrancyGuard
-} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {
-    SafeERC20
-} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
-import {FixedPointMath} from "../libraries/FixedPointMath.sol";
-import {IMintableERC20} from "../interfaces/IMintableERC20.sol";
-import {Pool} from "../libraries/pools/Pool.sol";
-import {Stake} from "../libraries/pools/Stake.sol";
+import "../libraries/FixedPointMath.sol";
+import "../interfaces/IMintableERC20.sol";
+import "../libraries/pools/Pool.sol";
+import "../libraries/pools/Stake.sol";
 
-import {Exchange} from "@elasticswap/elasticswap/src/contracts/Exchange.sol"
+import "@elasticswap/elasticswap/src/contracts/Exchange.sol";
 
 /// @title StakingProfitPools
 /// @notice A contract which allows users to stake to farm tokens that are "realized" once
@@ -53,7 +50,7 @@ contract MerklePools is ReentrancyGuard {
         address indexed user,
         uint256 indexed poolId,
         uint256 index,
-        uint256 amountClaimed,
+        uint256 amountClaimed
     );
 
     event MerkleRootUpdated(bytes32 merkleRoot);
@@ -81,7 +78,7 @@ contract MerklePools is ReentrancyGuard {
     mapping(address => mapping(uint256 => Stake.Data)) private _stakes;
 
     constructor(
-        IMintableERC20 _reward,
+        IMintableERC20 _baseToken,
         IERC20 _quoteToken,
         IERC20 _elasticLPToken,
         address _governance
@@ -91,7 +88,7 @@ contract MerklePools is ReentrancyGuard {
             "MerklePools: governance address cannot be 0x0"
         );
 
-        rewardToken = _reward;
+        baseToken = _baseToken;
         governance = _governance;
         elasticLPToken = _elasticLPToken;
         quoteToken = _quoteToken;
@@ -286,13 +283,12 @@ contract MerklePools is ReentrancyGuard {
     }
 
     /**
-     * @notice Allows a caller to add 
-     * @param _baseTokenQtyDesired qty of baseTokens that you would like to add to the exchange
-     * @param _quoteTokenQtyDesired qty of quoteTokens that you would like to add to the exchange
+     * @notice Allows a caller to generate LP tokens to distribute to stakers.  The quote token
+     * is taken from the caller and paired with freshly minted base token to create new LP tokens.
+     * @param _baseTokenQty qty of baseTokens that you would like to add (USDC)
+     * @param _quoteTokenQty qty of quoteTokens that you would like to add (TIC) these will be minted
      * @param _baseTokenQtyMin minimum acceptable qty of baseTokens that will be added (or transaction will revert)
      * @param _quoteTokenQtyMin minimum acceptable qty of quoteTokens that will be added (or transaction will revert)
-     * @param _liquidityTokenRecipient address for the exchange to issue the resulting liquidity tokens from
-     * this transaction to
      * @param _expirationTimestamp timestamp that this transaction must occur before (or transaction will revert)
      */
     function generateLPTokens(
@@ -301,14 +297,14 @@ contract MerklePools is ReentrancyGuard {
       uint256 _baseTokenQtyMin, 
       uint256 _quoteTokenQtyMin,
       uint256 _expirationTimestamp
-      ) external {
+      ) external onlyGovernance {
         // TODO: Check that we have enough unclaim TIC to generate the amount requested
         // TODO: Check to see if we have any excess TIC we can use to avoid another mint
         // this could occur due to slippage in the addLiq call
         baseToken.mint(address(this), _baseTokenQty);
         quoteToken.safeTransferFrom(msg.sender, address(this), _quoteTokenQty);
-        uint256 balanceBefore = elasticLP.balanceOf(address(this));
-        Exchange(elasticLPToken).addLiquidity(
+        uint256 balanceBefore = elasticLPToken.balanceOf(address(this));
+        Exchange(address(elasticLPToken)).addLiquidity(
           _baseTokenQty, 
           _quoteTokenQty,
           _baseTokenQtyMin,
@@ -316,7 +312,7 @@ contract MerklePools is ReentrancyGuard {
           address(this),
           _expirationTimestamp
         );
-        uint256 balanceAfter = elasticLP.balanceOf(address(this));
+        uint256 balanceAfter = elasticLPToken.balanceOf(address(this));
         emit LPTokensGenerated(balanceAfter - balanceBefore);
         // TODO: should we burn any "extra TIC" not consumed here? TIC has no burn, 
         // so we would have to send to 0x0...
@@ -326,7 +322,7 @@ contract MerklePools is ReentrancyGuard {
      * @notice Allows a new merkle root to be set by the contracts owner (the DAO)
      * @param _merkleRoot the merkle root to be set
      */
-    function setMerkleRoot(bytes32 _merkleRoot) public onlyOwner {
+    function setMerkleRoot(bytes32 _merkleRoot) public onlyGovernance {
         require(merkleRoot != _merkleRoot, "MerklePools: DUPLICATE_ROOT");
         merkleRoot = _merkleRoot;
         emit MerkleRootUpdated(merkleRoot);
@@ -344,7 +340,7 @@ contract MerklePools is ReentrancyGuard {
         uint256 _totalTokenAmount,
         uint256 _claimTokenAmount,
         bytes32[] calldata _merkleProof
-    ) external override {
+    ) external {
         //TODO: NEED TO UPDATE THEIR STAKE!!!
         
         require(
@@ -371,9 +367,10 @@ contract MerklePools is ReentrancyGuard {
             alreadyClaimedLambdaAmount +
             _claimTokenAmount;
 
-        
+        // Figure out which pool this is from!
+        uint256 poolId;
         elasticLPToken.safeTransfer(msg.sender, _claimTokenAmount);
-        emit TokensClaimed(_index, msg.sender, _claimTokenAmount, mintFeeAmount);
+        emit TokensClaimed(msg.sender, poolId, _index, _claimTokenAmount);
     }
 
     /**
@@ -543,6 +540,8 @@ contract MerklePools is ReentrancyGuard {
 
         baseToken.mint(msg.sender, _claimAmount);
 
-        emit TokensClaimed(msg.sender, _poolId, _claimAmount);
+        //emit TokensClaimed(msg.sender, _poolId, _claimAmount);
+        //TODO: FIXME (need event)
+        //emit TokensClaimed(msg.sender, poolId, _index _claimTokenAmount);
     }
 }
