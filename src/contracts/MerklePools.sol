@@ -71,11 +71,11 @@ contract MerklePools is ReentrancyGuard {
     // will return an identifier of zero.
     mapping(IERC20 => uint256) public tokenPoolIds;
 
-    Pool.Context public poolContext; // The context shared between the pools.
-    Pool.List private _pools; // A list of all of the pools.
+    Pool.Context public poolContext;  // The context shared between the pools.
+    Pool.List private _pools;         // A list of all of the pools.
 
     // mapping of all of the user stakes mapped first by pool and then by address.
-    mapping(address => mapping(uint256 => Stake.Data)) private _stakes;
+    mapping(address => mapping(uint256 => Stake.Data)) public stakes;
 
     constructor(
         IMintableERC20 _baseToken,
@@ -227,7 +227,7 @@ contract MerklePools is ReentrancyGuard {
         Pool.Data storage _pool = _pools.get(_poolId);
         _pool.update(poolContext);
 
-        Stake.Data storage _stake = _stakes[msg.sender][_poolId];
+        Stake.Data storage _stake = stakes[msg.sender][_poolId];
         _stake.update(_pool, poolContext);
 
         _deposit(_poolId, _depositAmount);
@@ -245,7 +245,7 @@ contract MerklePools is ReentrancyGuard {
         Pool.Data storage _pool = _pools.get(_poolId);
         _pool.update(poolContext);
 
-        Stake.Data storage _stake = _stakes[msg.sender][_poolId];
+        Stake.Data storage _stake = stakes[msg.sender][_poolId];
         _stake.update(_pool, poolContext);
 
         _claim(_poolId);
@@ -261,7 +261,7 @@ contract MerklePools is ReentrancyGuard {
         Pool.Data storage _pool = _pools.get(_poolId);
         _pool.update(poolContext);
 
-        Stake.Data storage _stake = _stakes[msg.sender][_poolId];
+        Stake.Data storage _stake = stakes[msg.sender][_poolId];
         _stake.update(_pool, poolContext);
 
         _claim(_poolId);
@@ -275,7 +275,7 @@ contract MerklePools is ReentrancyGuard {
         Pool.Data storage _pool = _pools.get(_poolId);
         _pool.update(poolContext);
 
-        Stake.Data storage _stake = _stakes[msg.sender][_poolId];
+        Stake.Data storage _stake = stakes[msg.sender][_poolId];
         _stake.update(_pool, poolContext);
 
         _claim(_poolId);
@@ -465,7 +465,7 @@ contract MerklePools is ReentrancyGuard {
         view
         returns (uint256)
     {
-        Stake.Data storage _stake = _stakes[_account][_poolId];
+        Stake.Data storage _stake = stakes[_account][_poolId];
         return _stake.totalDeposited;
     }
  
@@ -480,7 +480,7 @@ contract MerklePools is ReentrancyGuard {
         view
         returns (uint256)
     {
-        Stake.Data storage _stake = _stakes[_account][_poolId];
+        Stake.Data storage _stake = stakes[_account][_poolId];
         return _stake.getUpdatedTotalUnclaimed(_pools.get(_poolId), poolContext);
     }
 
@@ -502,7 +502,7 @@ contract MerklePools is ReentrancyGuard {
      */
     function _deposit(uint256 _poolId, uint256 _depositAmount) internal {
         Pool.Data storage _pool = _pools.get(_poolId);
-        Stake.Data storage _stake = _stakes[msg.sender][_poolId];
+        Stake.Data storage _stake = stakes[msg.sender][_poolId];
 
         _pool.totalDeposited = _pool.totalDeposited + _depositAmount;
         _stake.totalDeposited = _stake.totalDeposited + _depositAmount;
@@ -520,7 +520,7 @@ contract MerklePools is ReentrancyGuard {
      */
     function _withdraw(uint256 _poolId, uint256 _withdrawAmount) internal {
         Pool.Data storage _pool = _pools.get(_poolId);
-        Stake.Data storage _stake = _stakes[msg.sender][_poolId];
+        Stake.Data storage _stake = stakes[msg.sender][_poolId];
 
         _pool.totalDeposited = _pool.totalDeposited - _withdrawAmount;
         _stake.totalDeposited = _stake.totalDeposited - _withdrawAmount;
@@ -537,7 +537,7 @@ contract MerklePools is ReentrancyGuard {
      * @notice use this function to claim the tokens from a corresponding pool by ID.
      */
     function _claim(uint256 _poolId) internal {
-        Stake.Data storage _stake = _stakes[msg.sender][_poolId];
+        Stake.Data storage _stake = stakes[msg.sender][_poolId];
 
         uint256 _claimAmount = _stake.totalUnclaimed;
         _stake.totalUnclaimed = 0;
