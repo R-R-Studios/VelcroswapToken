@@ -76,14 +76,14 @@ library Pool {
         }
 
         uint256 _rewardRate = _data.getRewardRate(_ctx);
-        uint256 _distributeAmount = _rewardRate * _elapsedTime;
+        uint256 _amountToDistribute = _rewardRate * _elapsedTime;
 
-        if (_distributeAmount == 0) {
+        if (_amountToDistribute == 0) {
             return _data.accumulatedRewardWeight;
         }
 
         FixedPointMath.FixedDecimal memory _rewardWeight =
-            FixedPointMath.fromU256(_distributeAmount).div(
+            FixedPointMath.fromU256(_amountToDistribute).div(
                 _data.totalDeposited
             );
         return _data.accumulatedRewardWeight.add(_rewardWeight);
