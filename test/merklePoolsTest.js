@@ -74,11 +74,46 @@ describe("MerklePools", () => {
 
     // set pool weights
     await merklePools.setRewardWeights(Object.values(poolWeights));
+
+    //grant merkle pool minter role
+    const minterRole = await ticToken.MINTER_ROLE();
+    await ticToken.grantRole(minterRole, merklePools.address);
   });
 
   describe("constructor", () => {
-    it.only("Should do a thing", async () => {
-      console.log(merklePools.address);
+    it("Properly sets initial variables", async () => {
+      expect(await merklePools.baseToken()).to.eq(ticToken.address);
+      expect(await merklePools.quoteToken()).to.eq(usdcToken.address);
+      expect(await merklePools.elasticLPToken()).to.eq(exchange.address);
+      expect(await merklePools.governance()).to.eq(accounts[0].address);
     });
   });
+
+  describe("generateLPTokens", () => {
+    it.only("Can mint LP tokens", async() => {
+      // clean start
+      expect(await usdcToken.balanceOf(exchange.address)).to.eq(0);
+      expect(await ticToken.balanceOf(exchange.address)).to.eq(0);
+
+      // add approval for usdc
+      await usdcToken.approve(merklePools.address, await usdcToken.balanceOf(accounts[0].address));
+
+      const usdcToAdd = ethers.utils.parseUnits("100", 18);
+      const ticToBeMinted = usdcToAdd.div(10);  // TIC = $10USDC
+      const expirationTimestamp = Math.round(Date.now() / 1000 + 60);
+      await expect(merklePools.generateLPTokens(
+        ticToBeMinted,
+        usdcToAdd,
+        ticToBeMinted.sub(1),
+        usdcToAdd.sub(1),
+        expirationTimestamp
+      )).to.emit(merklePools, "LPTokensGenerated");
+
+      expect(await usdcToken.balanceOf(exchange.address)).to.not.eq(0);
+      expect(await ticToken.balanceOf(exchange.address)).to.not.eq(0);
+      expect(await exchange.balanceOf(merklePools.address)).to.not.eq(0);
+
+      // add test to ensure we can add LP tokens now that initial price has been established.
+    })
+  })
 });

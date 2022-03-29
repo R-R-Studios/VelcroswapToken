@@ -92,6 +92,10 @@ contract MerklePools is ReentrancyGuard {
         governance = _governance;
         elasticLPToken = _elasticLPToken;
         quoteToken = _quoteToken;
+
+        // grant approval to exchange so we can mint
+        baseToken.approve(address(_elasticLPToken), type(uint256).max);
+        quoteToken.approve(address(_elasticLPToken), type(uint256).max);
     }
  
     /**
