@@ -9,8 +9,8 @@ import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 import "../libraries/FixedPointMath.sol";
 import "../interfaces/IMintableERC20.sol";
-import "../libraries/pools/Pool.sol";
-import "../libraries/pools/Stake.sol";
+import "../libraries/merklePools/MerklePool.sol";
+import "../libraries/merklePools/MerkleStake.sol";
 
 import "@elasticswap/elasticswap/src/contracts/Exchange.sol";
 
@@ -19,10 +19,10 @@ import "@elasticswap/elasticswap/src/contracts/Exchange.sol";
 /// profits enter the system and can be claimed via a merkle proof.
 contract MerklePools is ReentrancyGuard {
     using FixedPointMath for FixedPointMath.FixedDecimal;
-    using Pool for Pool.Data;
-    using Pool for Pool.List;
+    using MerklePool for MerklePool.Data;
+    using MerklePool for MerklePool.List;
     using SafeERC20 for IERC20;
-    using Stake for Stake.Data;
+    using MerkleStake for MerkleStake.Data;
 
     event PendingGovernanceUpdated(address pendingGovernance);
 
@@ -71,11 +71,11 @@ contract MerklePools is ReentrancyGuard {
     // will return an identifier of zero.
     mapping(IERC20 => uint256) public tokenPoolIds;
 
-    Pool.Context public poolContext;  // The context shared between the pools.
-    Pool.List private _pools;         // A list of all of the pools.
+    MerklePool.Context public poolContext;  // The context shared between the pools.
+    MerklePool.List private _pools;         // A list of all of the pools.
 
     // mapping of all of the user stakes mapped first by pool and then by address.
-    mapping(address => mapping(uint256 => Stake.Data)) public stakes;
+    mapping(address => mapping(uint256 => MerkleStake.Data)) public stakes;
 
     constructor(
         IMintableERC20 _baseToken,
@@ -166,7 +166,7 @@ contract MerklePools is ReentrancyGuard {
         uint256 _poolId = _pools.length();
 
         _pools.push(
-            Pool.Data({
+            MerklePool.Data({
                 token: _token,
                 totalDeposited: 0,
                 rewardWeight: 0,
@@ -200,7 +200,7 @@ contract MerklePools is ReentrancyGuard {
         uint256 _totalRewardWeight = poolContext.totalRewardWeight;
         uint256 poolsLength = _pools.length();
         for (uint256 _poolId = 0; _poolId < poolsLength; _poolId++) {
-            Pool.Data storage _pool = _pools.get(_poolId);
+            MerklePool.Data storage _pool = _pools.get(_poolId);
 
             uint256 _currentRewardWeight = _pool.rewardWeight;
             if (_currentRewardWeight == _rewardWeights[_poolId]) {
@@ -228,10 +228,10 @@ contract MerklePools is ReentrancyGuard {
         external
         nonReentrant
     {
-        Pool.Data storage _pool = _pools.get(_poolId);
+        MerklePool.Data storage _pool = _pools.get(_poolId);
         _pool.update(poolContext);
 
-        Stake.Data storage _stake = stakes[msg.sender][_poolId];
+        MerkleStake.Data storage _stake = stakes[msg.sender][_poolId];
         _stake.update(_pool, poolContext);
 
         _deposit(_poolId, _depositAmount);
@@ -246,10 +246,10 @@ contract MerklePools is ReentrancyGuard {
         external
         nonReentrant
     {
-        Pool.Data storage _pool = _pools.get(_poolId);
+        MerklePool.Data storage _pool = _pools.get(_poolId);
         _pool.update(poolContext);
 
-        Stake.Data storage _stake = stakes[msg.sender][_poolId];
+        MerkleStake.Data storage _stake = stakes[msg.sender][_poolId];
         _stake.update(_pool, poolContext);
 
         _claim(_poolId);
@@ -262,10 +262,10 @@ contract MerklePools is ReentrancyGuard {
      * @notice use this function to claim the tokens from a corresponding pool by ID.
      */
     function claim(uint256 _poolId) external nonReentrant {
-        Pool.Data storage _pool = _pools.get(_poolId);
+        MerklePool.Data storage _pool = _pools.get(_poolId);
         _pool.update(poolContext);
 
-        Stake.Data storage _stake = stakes[msg.sender][_poolId];
+        MerkleStake.Data storage _stake = stakes[msg.sender][_poolId];
         _stake.update(_pool, poolContext);
 
         _claim(_poolId);
@@ -276,10 +276,10 @@ contract MerklePools is ReentrancyGuard {
      * @param _poolId the pool to exit from.
      */
     function exit(uint256 _poolId) external nonReentrant {
-        Pool.Data storage _pool = _pools.get(_poolId);
+        MerklePool.Data storage _pool = _pools.get(_poolId);
         _pool.update(poolContext);
 
-        Stake.Data storage _stake = stakes[msg.sender][_poolId];
+        MerkleStake.Data storage _stake = stakes[msg.sender][_poolId];
         _stake.update(_pool, poolContext);
 
         _claim(_poolId);
@@ -412,7 +412,7 @@ contract MerklePools is ReentrancyGuard {
      * @return the token.
      */
     function getPoolToken(uint256 _poolId) external view returns (IERC20) {
-        Pool.Data storage _pool = _pools.get(_poolId);
+        MerklePool.Data storage _pool = _pools.get(_poolId);
         return _pool.token;
     }
 
@@ -421,7 +421,7 @@ contract MerklePools is ReentrancyGuard {
      * @param _poolId the identifier of the pool. 
      * @return the Pool.Data (memory, not storage!).
      */
-    function getPool(uint256 _poolId) external view returns (Pool.Data memory) {
+    function getPool(uint256 _poolId) external view returns (MerklePool.Data memory) {
       return _pools.get(_poolId);
     }
 
@@ -435,7 +435,7 @@ contract MerklePools is ReentrancyGuard {
         view
         returns (uint256)
     {
-        Pool.Data storage _pool = _pools.get(_poolId);
+        MerklePool.Data storage _pool = _pools.get(_poolId);
         return _pool.totalDeposited;
     }
 
@@ -450,7 +450,7 @@ contract MerklePools is ReentrancyGuard {
         view
         returns (uint256)
     {
-        Pool.Data storage _pool = _pools.get(_poolId);
+        MerklePool.Data storage _pool = _pools.get(_poolId);
         return _pool.rewardWeight;
     }
 
@@ -464,7 +464,7 @@ contract MerklePools is ReentrancyGuard {
         view
         returns (uint256)
     {
-        Pool.Data storage _pool = _pools.get(_poolId);
+        MerklePool.Data storage _pool = _pools.get(_poolId);
         return _pool.getRewardRate(poolContext);
     }
 
@@ -479,7 +479,7 @@ contract MerklePools is ReentrancyGuard {
         view
         returns (uint256)
     {
-        Stake.Data storage _stake = stakes[_account][_poolId];
+        MerkleStake.Data storage _stake = stakes[_account][_poolId];
         return _stake.totalDeposited;
     }
  
@@ -494,7 +494,7 @@ contract MerklePools is ReentrancyGuard {
         view
         returns (uint256)
     {
-        Stake.Data storage _stake = stakes[_account][_poolId];
+        MerkleStake.Data storage _stake = stakes[_account][_poolId];
         return _stake.getUpdatedTotalUnclaimed(_pools.get(_poolId), poolContext);
     }
 
@@ -503,7 +503,7 @@ contract MerklePools is ReentrancyGuard {
      */
     function _updatePools() internal {
         for (uint256 _poolId = 0; _poolId < _pools.length(); _poolId++) {
-            Pool.Data storage _pool = _pools.get(_poolId);
+            MerklePool.Data storage _pool = _pools.get(_poolId);
             _pool.update(poolContext);
         }
     }
@@ -515,8 +515,8 @@ contract MerklePools is ReentrancyGuard {
      * @param _depositAmount the amount of tokens to deposit.
      */
     function _deposit(uint256 _poolId, uint256 _depositAmount) internal {
-        Pool.Data storage _pool = _pools.get(_poolId);
-        Stake.Data storage _stake = stakes[msg.sender][_poolId];
+        MerklePool.Data storage _pool = _pools.get(_poolId);
+        MerkleStake.Data storage _stake = stakes[msg.sender][_poolId];
 
         _pool.totalDeposited = _pool.totalDeposited + _depositAmount;
         _stake.totalDeposited = _stake.totalDeposited + _depositAmount;
@@ -533,8 +533,8 @@ contract MerklePools is ReentrancyGuard {
      * @param _withdrawAmount  The number of tokens to withdraw.
      */
     function _withdraw(uint256 _poolId, uint256 _withdrawAmount) internal {
-        Pool.Data storage _pool = _pools.get(_poolId);
-        Stake.Data storage _stake = stakes[msg.sender][_poolId];
+        MerklePool.Data storage _pool = _pools.get(_poolId);
+        MerkleStake.Data storage _stake = stakes[msg.sender][_poolId];
 
         _pool.totalDeposited = _pool.totalDeposited - _withdrawAmount;
         _stake.totalDeposited = _stake.totalDeposited - _withdrawAmount;
@@ -551,7 +551,7 @@ contract MerklePools is ReentrancyGuard {
      * @notice use this function to claim the tokens from a corresponding pool by ID.
      */
     function _claim(uint256 _poolId) internal {
-        Stake.Data storage _stake = stakes[msg.sender][_poolId];
+        MerkleStake.Data storage _stake = stakes[msg.sender][_poolId];
 
         uint256 _claimAmount = _stake.totalUnclaimed;
         _stake.totalUnclaimed = 0;

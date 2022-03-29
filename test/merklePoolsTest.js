@@ -121,26 +121,36 @@ describe("MerklePools", () => {
   })
 
   describe("deposit", () => {
-    it.only("Handles 1 staker in 1 pools correctly", async () => {
+    it.only("Handles 2 stakers in 1 pools correctly", async () => {
       const staker1 = accounts[2];
+      const staker2 = accounts[3];
 
       // fresh wallet
       expect(await ticToken.balanceOf(staker1.address)).to.eq(0);
+      expect(await ticToken.balanceOf(staker2.address)).to.eq(0);
 
       // transfer in TIC
-      const initialTIC = ethers.utils.parseUnits("100", 18); 
-      await ticToken.mint(staker1.address, initialTIC);
-      expect(await ticToken.balanceOf(staker1.address)).to.eq(initialTIC);
+      const staker1TIC = ethers.utils.parseUnits("100", 18); 
+      const staker2TIC = ethers.utils.parseUnits("50", 18); 
+      await ticToken.mint(staker1.address, staker1TIC);
+      await ticToken.mint(staker2.address, staker2TIC);
+      expect(await ticToken.balanceOf(staker1.address)).to.eq(staker1TIC);
+      expect(await ticToken.balanceOf(staker2.address)).to.eq(staker2TIC);
 
       // stake tic
-      await ticToken.connect(staker1).approve(merklePools.address, initialTIC);
-      await merklePools.connect(staker1).deposit(0, initialTIC);
+      await ticToken.connect(staker1).approve(merklePools.address, staker1TIC);
+      await merklePools.connect(staker1).deposit(0, staker1TIC);
 
-      expect(await merklePools.getPoolTotalDeposited(0)).to.eq(initialTIC);
-      expect(await merklePools.getStakeTotalDeposited(staker1.address, 0)).to.eq(initialTIC);
-      expect(await merklePools.getStakeTotalUnclaimed(staker1.address, 0)).to.eq(0);
+      await ticToken.connect(staker2).approve(merklePools.address, staker2TIC);
+      await merklePools.connect(staker2).deposit(0, staker2TIC);
+
+      expect(await merklePools.getPoolTotalDeposited(0)).to.eq(staker1TIC.add(staker2TIC));
+
+      expect(await merklePools.getStakeTotalDeposited(staker1.address, 0)).to.eq(staker1TIC);
+      expect(await merklePools.getStakeTotalDeposited(staker2.address, 0)).to.eq(staker2TIC);
 
       console.log(await merklePools.getPool(0));
+
 
 
     });
