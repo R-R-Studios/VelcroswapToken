@@ -71,7 +71,7 @@ contract MerklePools is ReentrancyGuard {
     // will return an identifier of zero.
     mapping(IERC20 => uint256) public tokenPoolIds;
 
-    Pool.Context private _ctx; // The context shared between the pools.
+    Pool.Context public poolContext; // The context shared between the pools.
     Pool.List private _pools; // A list of all of the pools.
 
     // mapping of all of the user stakes mapped first by pool and then by address.
@@ -138,7 +138,7 @@ contract MerklePools is ReentrancyGuard {
     function setRewardRate(uint256 _rewardRate) external onlyGovernance {
         _updatePools();
 
-        _ctx.rewardRate = _rewardRate;
+        poolContext.rewardRate = _rewardRate;
 
         emit RewardRateUpdated(_rewardRate);
     }
@@ -193,7 +193,7 @@ contract MerklePools is ReentrancyGuard {
 
         _updatePools();
 
-        uint256 _totalRewardWeight = _ctx.totalRewardWeight;
+        uint256 _totalRewardWeight = poolContext.totalRewardWeight;
         uint256 poolsLength = _pools.length();
         for (uint256 _poolId = 0; _poolId < poolsLength; _poolId++) {
             Pool.Data storage _pool = _pools.get(_poolId);
@@ -212,7 +212,7 @@ contract MerklePools is ReentrancyGuard {
             emit PoolRewardWeightUpdated(_poolId, _rewardWeights[_poolId]);
         }
 
-        _ctx.totalRewardWeight = _totalRewardWeight;
+        poolContext.totalRewardWeight = _totalRewardWeight;
     }
 
     /**
@@ -225,10 +225,10 @@ contract MerklePools is ReentrancyGuard {
         nonReentrant
     {
         Pool.Data storage _pool = _pools.get(_poolId);
-        _pool.update(_ctx);
+        _pool.update(poolContext);
 
         Stake.Data storage _stake = _stakes[msg.sender][_poolId];
-        _stake.update(_pool, _ctx);
+        _stake.update(_pool, poolContext);
 
         _deposit(_poolId, _depositAmount);
     }
@@ -243,10 +243,10 @@ contract MerklePools is ReentrancyGuard {
         nonReentrant
     {
         Pool.Data storage _pool = _pools.get(_poolId);
-        _pool.update(_ctx);
+        _pool.update(poolContext);
 
         Stake.Data storage _stake = _stakes[msg.sender][_poolId];
-        _stake.update(_pool, _ctx);
+        _stake.update(_pool, poolContext);
 
         _claim(_poolId);
         _withdraw(_poolId, _withdrawAmount);
@@ -259,10 +259,10 @@ contract MerklePools is ReentrancyGuard {
      */
     function claim(uint256 _poolId) external nonReentrant {
         Pool.Data storage _pool = _pools.get(_poolId);
-        _pool.update(_ctx);
+        _pool.update(poolContext);
 
         Stake.Data storage _stake = _stakes[msg.sender][_poolId];
-        _stake.update(_pool, _ctx);
+        _stake.update(_pool, poolContext);
 
         _claim(_poolId);
     }
@@ -273,10 +273,10 @@ contract MerklePools is ReentrancyGuard {
      */
     function exit(uint256 _poolId) external nonReentrant {
         Pool.Data storage _pool = _pools.get(_poolId);
-        _pool.update(_ctx);
+        _pool.update(poolContext);
 
         Stake.Data storage _stake = _stakes[msg.sender][_poolId];
-        _stake.update(_pool, _ctx);
+        _stake.update(_pool, poolContext);
 
         _claim(_poolId);
         _withdraw(_poolId, _stake.totalDeposited);
@@ -382,7 +382,7 @@ contract MerklePools is ReentrancyGuard {
      * @return the reward rate.
      */
     function rewardRate() external view returns (uint256) {
-        return _ctx.rewardRate;
+        return poolContext.rewardRate;
     }
 
     /**
@@ -390,7 +390,7 @@ contract MerklePools is ReentrancyGuard {
      * @return the total reward weight.
      */
     function totalRewardWeight() external view returns (uint256) {
-        return _ctx.totalRewardWeight;
+        return poolContext.totalRewardWeight;
     }
 
     /**
@@ -451,7 +451,7 @@ contract MerklePools is ReentrancyGuard {
         returns (uint256)
     {
         Pool.Data storage _pool = _pools.get(_poolId);
-        return _pool.getRewardRate(_ctx);
+        return _pool.getRewardRate(poolContext);
     }
 
     /**
@@ -481,7 +481,7 @@ contract MerklePools is ReentrancyGuard {
         returns (uint256)
     {
         Stake.Data storage _stake = _stakes[_account][_poolId];
-        return _stake.getUpdatedTotalUnclaimed(_pools.get(_poolId), _ctx);
+        return _stake.getUpdatedTotalUnclaimed(_pools.get(_poolId), poolContext);
     }
 
     /**
@@ -490,7 +490,7 @@ contract MerklePools is ReentrancyGuard {
     function _updatePools() internal {
         for (uint256 _poolId = 0; _poolId < _pools.length(); _poolId++) {
             Pool.Data storage _pool = _pools.get(_poolId);
-            _pool.update(_ctx);
+            _pool.update(poolContext);
         }
     }
  
