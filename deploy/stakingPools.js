@@ -1,14 +1,14 @@
 // avalanche testnet seems to have some state issues with nonces, this ensures those are resolved.
-// unclear if we need this for mainnet, but it cannot hurt. 
+// unclear if we need this for mainnet, but it cannot hurt.
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const { deploy, log } = deployments;
   const namedAccounts = await getNamedAccounts();
   const { admin, governance } = namedAccounts;
-  
+
   const poolLib = await deployments.get("Pool");
   const stakeLib = await deployments.get("Stake");
   const fixedPointMathLib = await deployments.get("FixedPointMath");
@@ -20,18 +20,18 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   const deployResult = await deploy("StakingPools", {
     from: admin,
     contract: "StakingPools",
-    args: [ ticToken.address, admin],
+    args: [ticToken.address, admin],
     libraries: {
       Pool: poolLib.address,
       Stake: stakeLib.address,
-      FixedPointMath: fixedPointMathLib.address
-    }
+      FixedPointMath: fixedPointMathLib.address,
+    },
   });
   if (deployResult.newlyDeployed) {
     log(
       `StakingPools deployed at ${deployResult.address} using ${deployResult.receipt.gasUsed} gas`
     );
-    
+
     // 1. create pools for each token we have deployed.
     const accounts = await ethers.getSigners();
     const stakingPools = new ethers.Contract(
@@ -47,8 +47,10 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     log(`Creating pool for Time Token Team address:${timeTokenTeam.address}`);
     await stakingPools.createPool(timeTokenTeam.address);
     await sleep(10000);
-   
-    log(`Creating pool for Time Token PreSeed address:${timeTokenPreSeed.address}`);
+
+    log(
+      `Creating pool for Time Token PreSeed address:${timeTokenPreSeed.address}`
+    );
     await stakingPools.createPool(timeTokenPreSeed.address);
     await sleep(10000);
 
@@ -72,11 +74,11 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 };
 module.exports.tags = ["StakingPools"];
 module.exports.dependencies = [
-  "Pool", 
-  "Stake", 
-  "FixedPointMath", 
+  "Pool",
+  "Stake",
+  "FixedPointMath",
   "TicToken",
   "TimeTokenDAO",
   "TimeTokenTeam",
-  "TimeTokenPreSeed"
+  "TimeTokenPreSeed",
 ];

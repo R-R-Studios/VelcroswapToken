@@ -8,7 +8,6 @@ require("dotenv").config();
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
 
-
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
@@ -30,24 +29,30 @@ module.exports = {
       deploy: ["deploy"],
       url: process.env.GOERLI_URL,
       accounts:
-        process.env.GOERLI_PRIVATE_KEY !== undefined ? [process.env.GOERLI_PRIVATE_KEY] : [],
+        process.env.GOERLI_PRIVATE_KEY !== undefined
+          ? [process.env.GOERLI_PRIVATE_KEY]
+          : [],
     },
     fuji: {
       deploy: ["deploy"],
-      url: 'https://api.avax-test.network/ext/bc/C/rpc',
+      url: "https://api.avax-test.network/ext/bc/C/rpc",
       gasPrice: 225000000000,
       chainId: 43113,
       accounts:
-        process.env.FUJI_PRIVATE_KEY !== undefined ? [process.env.FUJI_PRIVATE_KEY] : [],
+        process.env.FUJI_PRIVATE_KEY !== undefined
+          ? [process.env.FUJI_PRIVATE_KEY]
+          : [],
     },
     avalanche: {
       deploy: ["deploy"],
-      url: 'https://api.avax.network/ext/bc/C/rpc',
+      url: "https://api.avax.network/ext/bc/C/rpc",
       gasPrice: 50000000000, // 58 nAVAX (10e9)
       chainId: 43114,
       accounts:
-        process.env.AVAX_PRIVATE_KEY !== undefined ? [process.env.AVAX_PRIVATE_KEY] : [],
-    }
+        process.env.AVAX_PRIVATE_KEY !== undefined
+          ? [process.env.AVAX_PRIVATE_KEY]
+          : [],
+    },
   },
   paths: {
     deploy: ["deploy/core"],

@@ -23,6 +23,21 @@
     chalk "^2.0.0"
     js-tokens "^4.0.0"
 
+"@elasticswap/elasticswap@^0.0.10":
+  version "0.0.10"
+  resolved "https://registry.yarnpkg.com/@elasticswap/elasticswap/-/elasticswap-0.0.10.tgz#ee0d4a0c4bb8e6929a45e5d335bd85ab63f765a0"
+  integrity sha512-EMjfQkgUO+6fw8J0kgBGllyOIiMYE2rFEfCPBASZ48RnulJZZrfEbeSTr3drmxKXqLvnPgObgZ+MnZALjin+0A==
+  dependencies:
+    "@nomiclabs/hardhat-ethers" "^2.0.2"
+    "@nomiclabs/hardhat-waffle" "^2.0.1"
+    "@openzeppelin/contracts" "^4.5.0"
+    bignumber.js "^9.0.2"
+    dotenv "^16.0.0"
+    hardhat-contract-sizer "^2.0.3"
+    hardhat-deploy "^0.10.6"
+    hardhat-gas-reporter "^1.0.4"
+    solidity-coverage "^0.7.17"
+
 "@ensdomains/ens@^0.4.4":
   version "0.4.5"
   resolved "https://registry.yarnpkg.com/@ensdomains/ens/-/ens-0.4.5.tgz#e0aebc005afdc066447c6e22feb4eda89a5edbfc"
