@@ -1,9 +1,3 @@
-// avalanche testnet seems to have some state issues with nonces, this ensures those are resolved.
-// unclear if we need this for mainnet, but it cannot hurt.
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const { deploy, log } = deployments;
   const namedAccounts = await getNamedAccounts();
@@ -13,13 +7,10 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   const stakeLib = await deployments.get("Stake");
   const fixedPointMathLib = await deployments.get("FixedPointMath");
   const ticToken = await deployments.get("TicToken");
-  const timeTokenDAO = await deployments.get("TimeTokenDAO");
-  const timeTokenTeam = await deployments.get("TimeTokenTeam");
-  const timeTokenPreSeed = await deployments.get("TimeTokenPreSeed");
 
-  const deployResult = await deploy("StakingPools", {
+  const deployResult = await deploy("MerklePools", {
     from: admin,
-    contract: "StakingPools",
+    contract: "MerklePools",
     args: [ticToken.address, admin],
     libraries: {
       Pool: poolLib.address,
@@ -44,41 +35,22 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
       ticToken.abi,
       accounts[0]
     );
-    log(`Creating pool for Time Token Team address:${timeTokenTeam.address}`);
-    await stakingPools.createPool(timeTokenTeam.address);
-    await sleep(10000);
-
-    log(
-      `Creating pool for Time Token PreSeed address:${timeTokenPreSeed.address}`
-    );
-    await stakingPools.createPool(timeTokenPreSeed.address);
-    await sleep(10000);
-
-    log(`Creating pool for Time Token DAO address:${timeTokenDAO.address}`);
-    await stakingPools.createPool(timeTokenDAO.address);
-    await sleep(10000);
 
     log(`Creating pool for TIC address:${ticToken.address}`);
     await stakingPools.createPool(ticToken.address);
-    await sleep(10000);
 
-    // 2. grant minter role to staking pool!
     const minterRole = await ticTokenContract.MINTER_ROLE();
     await ticTokenContract.grantRole(minterRole, stakingPools.address);
-    await sleep(10000);
 
     // 3. set pending governance to DAO
     log(`Setting Pending Governance to : ${governance}`);
     await stakingPools.setPendingGovernance(governance);
   }
 };
-module.exports.tags = ["StakingPools"];
+module.exports.tags = ["MerklePools"];
 module.exports.dependencies = [
   "Pool",
   "Stake",
   "FixedPointMath",
   "TicToken",
-  "TimeTokenDAO",
-  "TimeTokenTeam",
-  "TimeTokenPreSeed",
 ];

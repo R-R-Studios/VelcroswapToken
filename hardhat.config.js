@@ -23,7 +23,7 @@ module.exports = {
   },
   networks: {
     hardhat: {
-      deploy: ["deploy"],
+      deploy: ["deploy/local", "deploy/core", "deploy/tic", "deploy/pools"],
     },
     goerli: {
       deploy: ["deploy"],
