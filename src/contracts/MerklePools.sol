@@ -64,6 +64,7 @@ contract MerklePools is ReentrancyGuard {
 
     address public governance;
     address public pendingGovernance;
+    address public forfeitAddress;      // receives all unclaimed TIC when someone exits
 
     bytes32 public merkleRoot;
     bool public isClaimsEnabled = false;
@@ -236,7 +237,11 @@ contract MerklePools is ReentrancyGuard {
         MerkleStake.Data storage _stake = stakes[msg.sender][_poolId];
         _stake.update(_pool, poolContext);
 
-        _deposit(_poolId, _depositAmount);
+        _pool.totalDeposited = _pool.totalDeposited + _depositAmount;
+        _stake.totalDeposited = _stake.totalDeposited + _depositAmount;
+
+        _pool.token.safeTransferFrom(msg.sender, address(this), _depositAmount);
+        emit TokensDeposited(msg.sender, _poolId, _depositAmount);
     }
 
     /**
@@ -249,9 +254,15 @@ contract MerklePools is ReentrancyGuard {
 
         MerkleStake.Data storage _stake = stakes[msg.sender][_poolId];
         _stake.update(_pool, poolContext);
+        
+        uint256 withdrawAmount = _stake.totalDeposited;
+        _pool.totalDeposited = _pool.totalDeposited - withdrawAmount;
+        _stake.totalDeposited = 0;
 
-        //_claim(_poolId);
-        _withdraw(_poolId, _stake.totalDeposited);
+        _pool.token.safeTransfer(msg.sender, withdrawAmount);
+
+        emit TokensWithdrawn(msg.sender, _poolId, withdrawAmount);
+
         // TODO: handle unclaimed rewards!
     }
 
@@ -544,24 +555,6 @@ contract MerklePools is ReentrancyGuard {
             MerklePool.Data storage _pool = _pools.get(_poolId);
             _pool.update(poolContext);
         }
-    }
-
-    /**
-     * @dev Stakes tokens into a pool.
-     * The pool and stake MUST be updated before calling this function.
-     * @param _poolId        the pool to deposit tokens into.
-     * @param _depositAmount the amount of tokens to deposit.
-     */
-    function _deposit(uint256 _poolId, uint256 _depositAmount) internal {
-        MerklePool.Data storage _pool = _pools.get(_poolId);
-        MerkleStake.Data storage _stake = stakes[msg.sender][_poolId];
-
-        _pool.totalDeposited = _pool.totalDeposited + _depositAmount;
-        _stake.totalDeposited = _stake.totalDeposited + _depositAmount;
-
-        _pool.token.safeTransferFrom(msg.sender, address(this), _depositAmount);
-
-        emit TokensDeposited(msg.sender, _poolId, _depositAmount);
     }
 
     /**
