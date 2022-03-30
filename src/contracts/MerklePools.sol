@@ -56,9 +56,11 @@ contract MerklePools is ReentrancyGuard {
     event MerkleRootUpdated(bytes32 merkleRoot);
     event LPTokensGenerated(uint256 lpAmountCreated, uint256 ticConsumed);
 
-    IMintableERC20 public ticToken;    // token which will be minted as a reward for staking.
-    IERC20 public quoteToken;          // other half of the LP token (not the reward token)
+    IMintableERC20 public ticToken;     // token which will be minted as a reward for staking.
+    IERC20 public quoteToken;           // other half of the LP token (not the reward token)
     IERC20 public elasticLPToken;       // elastic LP token we create to emit for claimed rewards
+
+    uint256 excessTICFromSlippage;      // extra TIC that can be used before next mint
 
     address public governance;
     address public pendingGovernance;
@@ -278,12 +280,12 @@ contract MerklePools is ReentrancyGuard {
         require(maxMintAmount >= _ticTokenQty, "MerklePools: NSF_UNCLAIMED");
         
         // check to make sure we don't have some "Excess" tic we can use.
-        uint256 ticBalance = ticToken.balanceOf(address(this));
-        uint256 ticBalanceToBeMinted = _ticTokenQty - ticBalance;
+        uint256 ticBalanceToBeMinted = _ticTokenQty - excessTICFromSlippage;
 
         ticToken.mint(address(this), ticBalanceToBeMinted);
         quoteToken.safeTransferFrom(msg.sender, address(this), _quoteTokenQty);
-        uint256 balanceBefore = elasticLPToken.balanceOf(address(this));
+        uint256 lpBalanceBefore = elasticLPToken.balanceOf(address(this));
+        uint256 ticBalanceBefore = ticToken.balanceOf(address(this));
         Exchange(address(elasticLPToken)).addLiquidity(
             _ticTokenQty,
             _quoteTokenQty,
@@ -293,10 +295,13 @@ contract MerklePools is ReentrancyGuard {
             _expirationTimestamp
         );
         uint256 lpBalanceCreated =
-            elasticLPToken.balanceOf(address(this)) - balanceBefore;
+            elasticLPToken.balanceOf(address(this)) - lpBalanceBefore;
         require(lpBalanceCreated != 0, "MerklePools: NO_LP_CREATED");
-        uint256 ticBalanceConsumed = _ticTokenQty - ticToken.balanceOf(address(this));
-        _pool.totalUnclaimedTICInLP = ticBalanceConsumed;
+
+        uint256 ticBalanceConsumed = ticBalanceBefore - ticToken.balanceOf(address(this));
+        excessTICFromSlippage = _ticTokenQty - ticBalanceConsumed;  //save for next time
+        
+        _pool.totalUnclaimedTICInLP += ticBalanceConsumed;
         emit LPTokensGenerated(lpBalanceCreated, ticBalanceConsumed);
     }
 
@@ -360,9 +365,14 @@ contract MerklePools is ReentrancyGuard {
         _stake.update(_pool, poolContext);
 
         // determine the amounts of the new claim
-        uint256 lpTokenAmountToBeClaimed = _totalLPTokenAmount - alreadyClaimedLPAmount;  
-        uint256 ticTokenAmountToBeClaimed =  _totalTICAmount - alreadyClaimedTICAmount;
-        
+        uint256 lpTokenAmountToBeClaimed; 
+        uint256 ticTokenAmountToBeClaimed;
+
+        unchecked {
+          lpTokenAmountToBeClaimed = _totalLPTokenAmount - alreadyClaimedLPAmount;    
+          ticTokenAmountToBeClaimed =  _totalTICAmount - alreadyClaimedTICAmount;
+        }
+
         require(
             ticTokenAmountToBeClaimed <= _stake.totalUnclaimed,
             "MerklePools: INVALID_UNCLAIMED"
@@ -376,6 +386,7 @@ contract MerklePools is ReentrancyGuard {
         }
         _pool.totalUnclaimedTIC -= ticTokenAmountToBeClaimed;
         _pool.totalUnclaimedTICInLP -= ticTokenAmountToBeClaimed;
+        
 
         elasticLPToken.safeTransfer(msg.sender, lpTokenAmountToBeClaimed);
         emit TokensClaimed(msg.sender, _poolId, _index, lpTokenAmountToBeClaimed);
@@ -454,6 +465,15 @@ contract MerklePools is ReentrancyGuard {
     {
         MerklePool.Data storage _pool = _pools.get(_poolId);
         return _pool.getUpdatedTotalUnclaimed(poolContext);
+    }
+
+    function getPoolTotalUnclaimedNotInLP(uint256 _poolId)
+        external
+        view
+        returns (uint256)
+    {
+        MerklePool.Data storage _pool = _pools.get(_poolId);
+        return _pool.getUpdatedTotalUnclaimed(poolContext) - _pool.totalUnclaimedTICInLP ;
     }
 
     /**
