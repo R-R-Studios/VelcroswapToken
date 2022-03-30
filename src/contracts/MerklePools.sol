@@ -169,6 +169,7 @@ contract MerklePools is ReentrancyGuard {
             MerklePool.Data({
                 token: _token,
                 totalDeposited: 0,
+                totalUnclaimed: 0,
                 rewardWeight: 0,
                 accumulatedRewardWeight: FixedPointMath.FixedDecimal(0),
                 lastUpdatedBlockTimestamp: block.timestamp
@@ -237,39 +238,21 @@ contract MerklePools is ReentrancyGuard {
         _deposit(_poolId, _depositAmount);
     }
 
-    /**
-     * @dev Withdraws staked tokens from a pool.
-     * @param _poolId          The pool to withdraw staked tokens from.
-     * @param _withdrawAmount  The number of tokens to withdraw.
-     */
-    function withdraw(uint256 _poolId, uint256 _withdrawAmount)
-        external
-        nonReentrant
-    {
-        MerklePool.Data storage _pool = _pools.get(_poolId);
-        _pool.update(poolContext);
 
-        MerkleStake.Data storage _stake = stakes[msg.sender][_poolId];
-        _stake.update(_pool, poolContext);
+    // /**
+    //  * @dev Claims all rewarded tokens from a pool.
+    //  * @param _poolId The pool to claim rewards from.
+    //  * @notice use this function to claim the tokens from a corresponding pool by ID.
+    //  */
+    // function claim(uint256 _poolId) external nonReentrant {
+    //     MerklePool.Data storage _pool = _pools.get(_poolId);
+    //     _pool.update(poolContext);
 
-        _claim(_poolId);
-        _withdraw(_poolId, _withdrawAmount);
-    }
+    //     MerkleStake.Data storage _stake = stakes[msg.sender][_poolId];
+    //     _stake.update(_pool, poolContext);
 
-    /**
-     * @dev Claims all rewarded tokens from a pool.
-     * @param _poolId The pool to claim rewards from.
-     * @notice use this function to claim the tokens from a corresponding pool by ID.
-     */
-    function claim(uint256 _poolId) external nonReentrant {
-        MerklePool.Data storage _pool = _pools.get(_poolId);
-        _pool.update(poolContext);
-
-        MerkleStake.Data storage _stake = stakes[msg.sender][_poolId];
-        _stake.update(_pool, poolContext);
-
-        _claim(_poolId);
-    }
+    //     _claim(_poolId);
+    // }
 
     /**
      * @dev Claims all rewards from a pool and then withdraws all staked tokens.
@@ -284,6 +267,7 @@ contract MerklePools is ReentrancyGuard {
 
         _claim(_poolId);
         _withdraw(_poolId, _stake.totalDeposited);
+        // TODO: handle unclaimed rewards!
     }
 
     /**
