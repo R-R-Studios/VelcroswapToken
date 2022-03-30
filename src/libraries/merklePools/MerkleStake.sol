@@ -36,21 +36,21 @@ library MerkleStake {
         MerklePool.Data storage _pool,
         MerklePool.Context storage _ctx
     ) internal view returns (uint256) {
-        FixedPointMath.FixedDecimal memory _currentAccumulatedWeight =
+        FixedPointMath.FixedDecimal memory currentAccumulatedWeight =
             _pool.getUpdatedAccumulatedRewardWeight(_ctx);
-        FixedPointMath.FixedDecimal memory _lastAccumulatedWeight =
+        FixedPointMath.FixedDecimal memory lastAccumulatedWeight =
             _self.lastAccumulatedWeight;
 
-        if (_currentAccumulatedWeight.cmp(_lastAccumulatedWeight) == 0) {
+        if (currentAccumulatedWeight.cmp(lastAccumulatedWeight) == 0) {
             return _self.totalUnclaimed;
         }
 
-        uint256 _amountToDistribute =
-            _currentAccumulatedWeight
-                .sub(_lastAccumulatedWeight)
+        uint256 amountToDistribute =
+            currentAccumulatedWeight
+                .sub(lastAccumulatedWeight)
                 .mul(_self.totalDeposited)
                 .decode();
 
-        return _self.totalUnclaimed + _amountToDistribute;
+        return _self.totalUnclaimed + amountToDistribute;
     }
 }

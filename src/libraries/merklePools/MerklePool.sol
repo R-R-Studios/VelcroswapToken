@@ -74,32 +74,32 @@ library MerklePool {
         if (_data.totalDeposited == 0) {
             return _data.accumulatedRewardWeight;
         }
-        uint256 _amountToDistribute = _data.getUpdatedAmountToDistribute(_ctx);
-        if (_amountToDistribute == 0) {
+        uint256 amountToDistribute = _data.getUpdatedAmountToDistribute(_ctx);
+        if (amountToDistribute == 0) {
             return _data.accumulatedRewardWeight;
         }
 
-        FixedPointMath.FixedDecimal memory _rewardWeight =
-            FixedPointMath.fromU256(_amountToDistribute).div(
+        FixedPointMath.FixedDecimal memory rewardWeight =
+            FixedPointMath.fromU256(amountToDistribute).div(
                 _data.totalDeposited
             );
 
-        return _data.accumulatedRewardWeight.add(_rewardWeight);
+        return _data.accumulatedRewardWeight.add(rewardWeight);
     }
 
     function getUpdatedAmountToDistribute(
         Data storage _data,
         Context storage _ctx
     ) internal view returns (uint256) {
-        uint256 _elapsedTime =
+        uint256 elapsedTime =
             block.timestamp - _data.lastUpdatedBlockTimestamp;
 
-        if (_elapsedTime == 0) {
+        if (elapsedTime == 0) {
             return 0;
         }
 
-        uint256 _rewardRate = _data.getRewardRate(_ctx);
-        return _rewardRate * _elapsedTime;
+        uint256 rewardRate = _data.getRewardRate(_ctx);
+        return rewardRate * elapsedTime;
     }
 
     function getUpdatedTotalUnclaimed(Data storage _data, Context storage _ctx)
@@ -145,8 +145,8 @@ library MerklePool {
     ///
     /// @return the index of the last element.
     function lastIndex(List storage _self) internal view returns (uint256) {
-        uint256 _length = _self.length();
-        return _length - 1;
+        uint256 length = _self.length();
+        return length - 1;
     }
 
     /// @dev Gets the number of elements in the list.
