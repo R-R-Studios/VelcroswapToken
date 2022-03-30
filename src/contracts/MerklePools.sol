@@ -135,10 +135,10 @@ contract MerklePools is ReentrancyGuard {
             "MerklePools: only pending governance"
         );
 
-        address _pendingGovernance = pendingGovernance;
-        governance = _pendingGovernance;
+        address pendingGovernance_ = pendingGovernance;
+        governance = pendingGovernance_;
 
-        emit GovernanceUpdated(_pendingGovernance);
+        emit GovernanceUpdated(pendingGovernance_);
     }
 
     /**
@@ -178,7 +178,7 @@ contract MerklePools is ReentrancyGuard {
             "MerklePools: token already has a pool"
         );
 
-        uint256 _poolId = _pools.length();
+        uint256 poolId = _pools.length();
 
         _pools.push(
             MerklePool.Data({
@@ -192,11 +192,11 @@ contract MerklePools is ReentrancyGuard {
             })
         );
 
-        tokenPoolIds[_token] = _poolId + 1;
+        tokenPoolIds[_token] = poolId + 1;
 
-        emit PoolCreated(_poolId, _token);
+        emit PoolCreated(poolId, _token);
 
-        return _poolId;
+        return poolId;
     }
 
     /**
@@ -214,7 +214,7 @@ contract MerklePools is ReentrancyGuard {
 
         _updatePools();
 
-        uint256 _totalRewardWeight = poolContext.totalRewardWeight;
+        uint256 totalRewardWeight = poolContext.totalRewardWeight;
         uint256 poolsLength = _pools.length();
         for (uint256 _poolId = 0; _poolId < poolsLength; _poolId++) {
             MerklePool.Data storage _pool = _pools.get(_poolId);
@@ -224,15 +224,15 @@ contract MerklePools is ReentrancyGuard {
                 continue;
             }
 
-            _totalRewardWeight =
-                _totalRewardWeight -
+            totalRewardWeight =
+                totalRewardWeight -
                 _currentRewardWeight +
                 _rewardWeights[_poolId];
             _pool.rewardWeight = _rewardWeights[_poolId];
 
             emit PoolRewardWeightUpdated(_poolId, _rewardWeights[_poolId]);
         }
-        poolContext.totalRewardWeight = _totalRewardWeight;
+        poolContext.totalRewardWeight = totalRewardWeight;
     }
 
     /**
@@ -245,16 +245,16 @@ contract MerklePools is ReentrancyGuard {
         nonReentrant
     {
         require(msg.sender != forfeitAddress, "MerklePools: UNUSABLE_ADDRESS");
-        MerklePool.Data storage _pool = _pools.get(_poolId);
-        _pool.update(poolContext);
+        MerklePool.Data storage pool = _pools.get(_poolId);
+        pool.update(poolContext);
 
-        MerkleStake.Data storage _stake = stakes[msg.sender][_poolId];
-        _stake.update(_pool, poolContext);
+        MerkleStake.Data storage stake = stakes[msg.sender][_poolId];
+        stake.update(pool, poolContext);
 
-        _pool.totalDeposited = _pool.totalDeposited + _depositAmount;
-        _stake.totalDeposited = _stake.totalDeposited + _depositAmount;
+        pool.totalDeposited = pool.totalDeposited + _depositAmount;
+        stake.totalDeposited = stake.totalDeposited + _depositAmount;
 
-        _pool.token.safeTransferFrom(msg.sender, address(this), _depositAmount);
+        pool.token.safeTransferFrom(msg.sender, address(this), _depositAmount);
         emit TokensDeposited(msg.sender, _poolId, _depositAmount);
     }
 
@@ -263,24 +263,24 @@ contract MerklePools is ReentrancyGuard {
      * @param _poolId the pool to exit from.
      */
     function exit(uint256 _poolId) external nonReentrant {
-        MerklePool.Data storage _pool = _pools.get(_poolId);
-        _pool.update(poolContext);
+        MerklePool.Data storage pool = _pools.get(_poolId);
+        pool.update(poolContext);
 
-        MerkleStake.Data storage _stake = stakes[msg.sender][_poolId];
-        _stake.update(_pool, poolContext);
+        MerkleStake.Data storage stake = stakes[msg.sender][_poolId];
+        stake.update(pool, poolContext);
         
-        uint256 withdrawAmount = _stake.totalDeposited;
-        _pool.totalDeposited = _pool.totalDeposited - withdrawAmount;
-        _stake.totalDeposited = 0;
+        uint256 withdrawAmount = stake.totalDeposited;
+        pool.totalDeposited = pool.totalDeposited - withdrawAmount;
+        stake.totalDeposited = 0;
 
         // unclaimed rewards are transferred to the forfeit address
         MerkleStake.Data storage forfeitStake = stakes[forfeitAddress][_poolId];
-        forfeitStake.update(_pool, poolContext);
+        forfeitStake.update(pool, poolContext);
 
-        forfeitStake.totalUnclaimed += _stake.totalUnclaimed;
-        _stake.totalUnclaimed = 0;
+        forfeitStake.totalUnclaimed += stake.totalUnclaimed;
+        stake.totalUnclaimed = 0;
 
-        _pool.token.safeTransfer(msg.sender, withdrawAmount);
+        pool.token.safeTransfer(msg.sender, withdrawAmount);
         emit TokensWithdrawn(msg.sender, _poolId, withdrawAmount);
     }
 
@@ -380,18 +380,18 @@ contract MerklePools is ReentrancyGuard {
         //     "MerklePools: INVALID_PROOF"
         // );
 
-        MerkleStake.Data storage _stake = stakes[msg.sender][_poolId];
-        uint256 alreadyClaimedLPAmount = _stake.totalClaimedLP;
-        uint256 alreadyClaimedTICAmount = _stake.totalClaimedTIC;
+        MerkleStake.Data storage stake = stakes[msg.sender][_poolId];
+        uint256 alreadyClaimedLPAmount = stake.totalClaimedLP;
+        uint256 alreadyClaimedTICAmount = stake.totalClaimedTIC;
 
         require(
             _totalLPTokenAmount > alreadyClaimedLPAmount && _totalTICAmount > alreadyClaimedTICAmount,
             "MerklePools: INVALID_CLAIM_AMOUNT"
         );
 
-        MerklePool.Data storage _pool = _pools.get(_poolId);
-        _pool.update(poolContext);
-        _stake.update(_pool, poolContext);
+        MerklePool.Data storage pool = _pools.get(_poolId);
+        pool.update(poolContext);
+        stake.update(pool, poolContext);
 
         // determine the amounts of the new claim
         uint256 lpTokenAmountToBeClaimed; 
@@ -403,18 +403,18 @@ contract MerklePools is ReentrancyGuard {
         }
 
         require(
-            ticTokenAmountToBeClaimed <= _stake.totalUnclaimed,
+            ticTokenAmountToBeClaimed <= stake.totalUnclaimed,
             "MerklePools: INVALID_UNCLAIMED_AMOUNT"
         );
 
-        _stake.totalClaimedLP = _totalLPTokenAmount;
-        _stake.totalClaimedTIC = _totalTICAmount;
+        stake.totalClaimedLP = _totalLPTokenAmount;
+        stake.totalClaimedTIC = _totalTICAmount;
 
         unchecked {
-            _stake.totalUnclaimed -= ticTokenAmountToBeClaimed;
+            stake.totalUnclaimed -= ticTokenAmountToBeClaimed;
         }
-        _pool.totalUnclaimedTIC -= ticTokenAmountToBeClaimed;
-        _pool.totalUnclaimedTICInLP -= ticTokenAmountToBeClaimed;
+        pool.totalUnclaimedTIC -= ticTokenAmountToBeClaimed;
+        pool.totalUnclaimedTICInLP -= ticTokenAmountToBeClaimed;
         
 
         elasticLPToken.safeTransfer(msg.sender, lpTokenAmountToBeClaimed);
@@ -451,8 +451,8 @@ contract MerklePools is ReentrancyGuard {
      * @return the token.
      */
     function getPoolToken(uint256 _poolId) external view returns (IERC20) {
-        MerklePool.Data storage _pool = _pools.get(_poolId);
-        return _pool.token;
+        MerklePool.Data storage pool = _pools.get(_poolId);
+        return pool.token;
     }
 
     /**
@@ -478,8 +478,8 @@ contract MerklePools is ReentrancyGuard {
         view
         returns (uint256)
     {
-        MerklePool.Data storage _pool = _pools.get(_poolId);
-        return _pool.totalDeposited;
+        MerklePool.Data storage pool = _pools.get(_poolId);
+        return pool.totalDeposited;
     }
 
     /**
@@ -492,8 +492,8 @@ contract MerklePools is ReentrancyGuard {
         view
         returns (uint256)
     {
-        MerklePool.Data storage _pool = _pools.get(_poolId);
-        return _pool.getUpdatedTotalUnclaimed(poolContext);
+        MerklePool.Data storage pool = _pools.get(_poolId);
+        return pool.getUpdatedTotalUnclaimed(poolContext);
     }
 
     function getPoolTotalUnclaimedNotInLP(uint256 _poolId)
@@ -501,8 +501,8 @@ contract MerklePools is ReentrancyGuard {
         view
         returns (uint256)
     {
-        MerklePool.Data storage _pool = _pools.get(_poolId);
-        return _pool.getUpdatedTotalUnclaimed(poolContext) - _pool.totalUnclaimedTICInLP ;
+        MerklePool.Data storage pool = _pools.get(_poolId);
+        return pool.getUpdatedTotalUnclaimed(poolContext) - pool.totalUnclaimedTICInLP ;
     }
 
     /**
@@ -516,8 +516,8 @@ contract MerklePools is ReentrancyGuard {
         view
         returns (uint256)
     {
-        MerklePool.Data storage _pool = _pools.get(_poolId);
-        return _pool.rewardWeight;
+        MerklePool.Data storage pool = _pools.get(_poolId);
+        return pool.rewardWeight;
     }
 
     /**
@@ -530,8 +530,8 @@ contract MerklePools is ReentrancyGuard {
         view
         returns (uint256)
     {
-        MerklePool.Data storage _pool = _pools.get(_poolId);
-        return _pool.getRewardRate(poolContext);
+        MerklePool.Data storage pool = _pools.get(_poolId);
+        return pool.getRewardRate(poolContext);
     }
 
     /**
@@ -545,8 +545,8 @@ contract MerklePools is ReentrancyGuard {
         view
         returns (uint256)
     {
-        MerkleStake.Data storage _stake = stakes[_account][_poolId];
-        return _stake.totalDeposited;
+        MerkleStake.Data storage stake = stakes[_account][_poolId];
+        return stake.totalDeposited;
     }
 
     /**
@@ -560,18 +560,18 @@ contract MerklePools is ReentrancyGuard {
         view
         returns (uint256)
     {
-        MerkleStake.Data storage _stake = stakes[_account][_poolId];
+        MerkleStake.Data storage stake = stakes[_account][_poolId];
         return
-            _stake.getUpdatedTotalUnclaimed(_pools.get(_poolId), poolContext);
+            stake.getUpdatedTotalUnclaimed(_pools.get(_poolId), poolContext);
     }
 
     /**
      * @dev Updates all of the pools.
      */
     function _updatePools() internal {
-        for (uint256 _poolId = 0; _poolId < _pools.length(); _poolId++) {
-            MerklePool.Data storage _pool = _pools.get(_poolId);
-            _pool.update(poolContext);
+        for (uint256 poolId = 0; poolId < _pools.length(); poolId++) {
+            MerklePool.Data storage pool = _pools.get(poolId);
+            pool.update(poolContext);
         }
     }
 }
