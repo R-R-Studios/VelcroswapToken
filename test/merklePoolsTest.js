@@ -168,7 +168,7 @@ describe("MerklePools", () => {
       // get current unclaimed amount
       const start = Math.round(Date.now() / 1000);
       const unclaimedAtStart = await merklePools.getPoolTotalUnclaimed(0);
-      const elapsedTime = 60*60*24*365; // 1 year
+      const elapsedTime = 60 * 60 * 24 * 365; // 1 year
       const endOfYear1 = start + elapsedTime;
 
       const poolRewardRate = await merklePools.getPoolRewardRate(0);
@@ -179,12 +179,16 @@ describe("MerklePools", () => {
       await ethers.provider.send("evm_mine");
 
       const unclaimedAtEndOfYear1 = await merklePools.getPoolTotalUnclaimed(0);
-      const diff = expectedUnclaimed.sub(unclaimedAtEndOfYear1.sub(unclaimedAtStart));
+      const diff = expectedUnclaimed.sub(
+        unclaimedAtEndOfYear1.sub(unclaimedAtStart)
+      );
       expect(diff.lt(ethers.utils.parseUnits("10", 18))).to.be.true; // diff of less than 10 tokens in a year.
 
       // add more TIC to stake an ensure accounting still tracks
       await merklePools.connect(staker2).deposit(0, staker2TIC.div(2));
-      const unclaimedAtStartOfYear2 = await merklePools.getPoolTotalUnclaimed(0);
+      const unclaimedAtStartOfYear2 = await merklePools.getPoolTotalUnclaimed(
+        0
+      );
 
       // advance block time
       const endOfYear2 = endOfYear1 + elapsedTime;
@@ -192,11 +196,30 @@ describe("MerklePools", () => {
       await ethers.provider.send("evm_mine");
 
       const unclaimedAtEndOfYear2 = await merklePools.getPoolTotalUnclaimed(0);
-      const diffAfterYear2 = expectedUnclaimed.sub(unclaimedAtEndOfYear2.sub(unclaimedAtStartOfYear2));
+      const diffAfterYear2 = expectedUnclaimed.sub(
+        unclaimedAtEndOfYear2.sub(unclaimedAtStartOfYear2)
+      );
       expect(diffAfterYear2.lt(ethers.utils.parseUnits("10", 18))).to.be.true; // diff of less than 10 tokens in a year.
 
-      // claim some rewards from staker2
+      // TODO: enable merkle verification!
 
+      // generate LP tokens so we can claim some!
+      const ticToMint = unclaimedAtEndOfYear2.div(20); // 5% of rewards are going to be issued
+      const ticPrice = 10;
+      const usdcToAdd = ticToMint.div(ticPrice); 
+      expect(await exchange.balanceOf(merklePools.address)).to.equal(0);
+      await usdcToken.approve(merklePools.address, usdcToAdd);
+      await merklePools.generateLPTokens(0, ticToMint, usdcToAdd, ticToMint.sub(1), usdcToAdd.sub(1), endOfYear2+6000);
+      const lpTokenBalance = await exchange.balanceOf(merklePools.address);
+      const ticPerLP = ticToMint.div(lpTokenBalance);
+      
+      const staker2unclaimedTic = await merklePools.getStakeTotalUnclaimed(staker2.address, 0);
+      const lpTokenForStaker2 = lpTokenBalance.mul(staker2unclaimedTic).div(unclaimedAtEndOfYear2);
+      const ticConsumedFromStaker2 = lpTokenForStaker2.mul(ticPerLP);
+
+      expect(await exchange.balanceOf(staker2.address)).to.equal(0);
+      await merklePools.connect(staker2).claim(0, 0, lpTokenForStaker2, ticConsumedFromStaker2, []);
+      expect(await exchange.balanceOf(staker2.address)).to.equal(lpTokenForStaker2);
     });
   });
 });

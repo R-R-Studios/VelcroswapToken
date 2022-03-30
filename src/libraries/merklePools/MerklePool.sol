@@ -21,7 +21,8 @@ library MerklePool {
     struct Data {
         IERC20 token;
         uint256 totalDeposited;
-        uint256 totalUnclaimed;
+        uint256 totalUnclaimedTIC;
+        uint256 totalUnclaimedTICInLP;
         uint256 rewardWeight;
         FixedPointMath.FixedDecimal accumulatedRewardWeight;
         uint256 lastUpdatedBlockTimestamp;
@@ -40,7 +41,7 @@ library MerklePool {
         );
 
         // TODO: make this more gas efficient! we calc it twice!
-        _data.totalUnclaimed = _data.getUpdatedTotalUnclaimed(_ctx);
+        _data.totalUnclaimedTIC = _data.getUpdatedTotalUnclaimed(_ctx);
         _data.lastUpdatedBlockTimestamp = block.timestamp;
     }
 
@@ -54,10 +55,10 @@ library MerklePool {
         view
         returns (uint256)
     {
-        if(_ctx.totalRewardWeight == 0){
-          return 0;
+        if (_ctx.totalRewardWeight == 0) {
+            return 0;
         }
-        
+
         return (_ctx.rewardRate * _data.rewardWeight) / _ctx.totalRewardWeight;
     }
 
@@ -106,7 +107,7 @@ library MerklePool {
         view
         returns (uint256)
     {
-        return _data.totalUnclaimed + _data.getUpdatedAmountToDistribute(_ctx);
+        return _data.totalUnclaimedTIC + _data.getUpdatedAmountToDistribute(_ctx);
     }
 
     /// @dev Adds an element to the list.

@@ -54,11 +54,11 @@ contract MerklePools is ReentrancyGuard {
     );
 
     event MerkleRootUpdated(bytes32 merkleRoot);
-    event LPTokensGenerated(uint256 amount);
+    event LPTokensGenerated(uint256 lpAmountCreated, uint256 ticConsumed);
 
-    IMintableERC20 public baseToken; // token which will be minted as a reward for staking.
-    IERC20 public quoteToken; // other half of the LP token (not the reward token)
-    IERC20 public elasticLPToken; // elastic LP token we create to emit for claimed rewards
+    IMintableERC20 public ticToken;    // token which will be minted as a reward for staking.
+    IERC20 public quoteToken;          // other half of the LP token (not the reward token)
+    IERC20 public elasticLPToken;       // elastic LP token we create to emit for claimed rewards
 
     address public governance;
     address public pendingGovernance;
@@ -77,7 +77,7 @@ contract MerklePools is ReentrancyGuard {
     mapping(address => mapping(uint256 => MerkleStake.Data)) public stakes;
 
     constructor(
-        IMintableERC20 _baseToken,
+        IMintableERC20 _ticToken,
         IERC20 _quoteToken,
         IERC20 _elasticLPToken,
         address _governance
@@ -87,13 +87,13 @@ contract MerklePools is ReentrancyGuard {
             "MerklePools: governance address cannot be 0x0"
         );
 
-        baseToken = _baseToken;
+        ticToken = _ticToken;
         governance = _governance;
         elasticLPToken = _elasticLPToken;
         quoteToken = _quoteToken;
 
         // grant approval to exchange so we can mint
-        baseToken.approve(address(_elasticLPToken), type(uint256).max);
+        ticToken.approve(address(_elasticLPToken), type(uint256).max);
         quoteToken.approve(address(_elasticLPToken), type(uint256).max);
     }
 
@@ -168,7 +168,8 @@ contract MerklePools is ReentrancyGuard {
             MerklePool.Data({
                 token: _token,
                 totalDeposited: 0,
-                totalUnclaimed: 0,
+                totalUnclaimedTIC: 0,
+                totalUnclaimedTICInLP: 0,
                 rewardWeight: 0,
                 accumulatedRewardWeight: FixedPointMath.FixedDecimal(0),
                 lastUpdatedBlockTimestamp: block.timestamp
@@ -215,7 +216,6 @@ contract MerklePools is ReentrancyGuard {
 
             emit PoolRewardWeightUpdated(_poolId, _rewardWeights[_poolId]);
         }
-
         poolContext.totalRewardWeight = _totalRewardWeight;
     }
 
@@ -237,21 +237,6 @@ contract MerklePools is ReentrancyGuard {
         _deposit(_poolId, _depositAmount);
     }
 
-    // /**
-    //  * @dev Claims all rewarded tokens from a pool.
-    //  * @param _poolId The pool to claim rewards from.
-    //  * @notice use this function to claim the tokens from a corresponding pool by ID.
-    //  */
-    // function claim(uint256 _poolId) external nonReentrant {
-    //     MerklePool.Data storage _pool = _pools.get(_poolId);
-    //     _pool.update(poolContext);
-
-    //     MerkleStake.Data storage _stake = stakes[msg.sender][_poolId];
-    //     _stake.update(_pool, poolContext);
-
-    //     _claim(_poolId);
-    // }
-
     /**
      * @dev Claims all rewards from a pool and then withdraws all staked tokens.
      * @param _poolId the pool to exit from.
@@ -270,43 +255,49 @@ contract MerklePools is ReentrancyGuard {
 
     /**
      * @notice Allows a caller to generate LP tokens to distribute to stakers.  The quote token
-     * is taken from the caller and paired with freshly minted base token to create new LP tokens.
-     * @param _baseTokenQty qty of baseTokens that you would like to add (USDC)
-     * @param _quoteTokenQty qty of quoteTokens that you would like to add (TIC) these will be minted
-     * @param _baseTokenQtyMin minimum acceptable qty of baseTokens that will be added (or transaction will revert)
+     * is taken from the caller and paired with freshly minted TIC token to create new LP tokens.
+     * @param _poolId id of the pool these LP Tokens are associated with.
+     * @param _ticTokenQty qty of ticTokens that you would like to add
+     * @param _quoteTokenQty qty of quoteTokens that you would like to add (USDC)
+     * @param _ticTokenQtyMin minimum acceptable qty of ticToken that will be added (or transaction will revert)
      * @param _quoteTokenQtyMin minimum acceptable qty of quoteTokens that will be added (or transaction will revert)
      * @param _expirationTimestamp timestamp that this transaction must occur before (or transaction will revert)
      */
     function generateLPTokens(
-        uint256 _baseTokenQty,
+        uint256 _poolId,
+        uint256 _ticTokenQty,
         uint256 _quoteTokenQty,
-        uint256 _baseTokenQtyMin,
+        uint256 _ticTokenQtyMin,
         uint256 _quoteTokenQtyMin,
         uint256 _expirationTimestamp
     ) external onlyGovernance {
-        // TODO: Check that we have enough unclaim TIC to generate the amount requested
-        // TODO: Check to see if we have any excess TIC we can use to avoid another mint
-        // this could occur due to slippage in the addLiq call
-        baseToken.mint(address(this), _baseTokenQty);
+
+        MerklePool.Data storage _pool = _pools.get(_poolId);
+        _pool.update(poolContext); // update pool first!
+        uint256 maxMintAmount = _pool.totalUnclaimedTIC - _pool.totalUnclaimedTICInLP;
+        require(maxMintAmount >= _ticTokenQty, "MerklePools: NSF_UNCLAIMED");
+        
+        // check to make sure we don't have some "Excess" tic we can use.
+        uint256 ticBalance = ticToken.balanceOf(address(this));
+        uint256 ticBalanceToBeMinted = _ticTokenQty - ticBalance;
+
+        ticToken.mint(address(this), ticBalanceToBeMinted);
         quoteToken.safeTransferFrom(msg.sender, address(this), _quoteTokenQty);
         uint256 balanceBefore = elasticLPToken.balanceOf(address(this));
         Exchange(address(elasticLPToken)).addLiquidity(
-            _baseTokenQty,
+            _ticTokenQty,
             _quoteTokenQty,
-            _baseTokenQtyMin,
+            _ticTokenQtyMin,
             _quoteTokenQtyMin,
             address(this),
             _expirationTimestamp
         );
-        uint256 balanceCreated =
+        uint256 lpBalanceCreated =
             elasticLPToken.balanceOf(address(this)) - balanceBefore;
-        require(balanceCreated != 0, "MerklePools: NO_LP_CREATED");
-        emit LPTokensGenerated(balanceCreated);
-        // TODO: should we burn any "extra TIC" not consumed here? TIC has no burn,
-        // so we would have to send to 0x0...
-
-        // TODO: we now need to update globally against the claimable TIC total...
-        // we should track this and subtract from that global?
+        require(lpBalanceCreated != 0, "MerklePools: NO_LP_CREATED");
+        uint256 ticBalanceConsumed = _ticTokenQty - ticToken.balanceOf(address(this));
+        _pool.totalUnclaimedTICInLP = ticBalanceConsumed;
+        emit LPTokensGenerated(lpBalanceCreated, ticBalanceConsumed);
     }
 
     /**
@@ -320,59 +311,74 @@ contract MerklePools is ReentrancyGuard {
     }
 
     /**
-     * @notice TODO: FIX ME Allows the contract owner (the DAO) to set a new fee amount to be collected on claiming
+     * @notice Allows for a staker to claim LP tokens based on the merkle proof provided.
      * @param _index the index of the merkle claim
-     * @param _totalLPTokenAmount the total lambda amount in the tree
-     * @param _claimLPTokenAmount the amount the users desires to claim
-     * @param _quoteTokenAmount the amount the users desires to claim
      * @param _poolId the pool id these rewards are associated with.
+     * @param _totalLPTokenAmount the total LP token amount in the tree
+     * @param _totalTICAmount the total TIC amount to be consumed in the tree
      * @param _merkleProof bytes32[] proof for the claim
      */
     function claim(
         uint256 _index,
-        uint256 _totalLPTokenAmount,
-        uint256 _claimLPTokenAmount,
-        uint256 _quoteTokenAmount,
         uint256 _poolId,
+        uint256 _totalLPTokenAmount,
+        uint256 _totalTICAmount,
         bytes32[] calldata _merkleProof
     ) external {
-        require(
-            _claimLPTokenAmount <= _totalLPTokenAmount,
-            "MerklePools: INVALID_CLAIM_AMOUNT"
-        );
 
         // Verify the merkle proof.
         bytes32 node =
-            keccak256(abi.encodePacked(_index, msg.sender, _totalLPTokenAmount, _quoteTokenAmount, _poolId));
+            keccak256(
+                abi.encodePacked(
+                    _index,
+                    _poolId,
+                    msg.sender,
+                    _totalLPTokenAmount,
+                    _totalTICAmount
+                )
+            );
         
-        require(
-            MerkleProof.verify(_merkleProof, merkleRoot, node),
-            "MerklePools: INVALID_PROOF"
-        );
-        
+        // TODO:
+        // TODO: ENABLE MERKLE PROOF!!!!!!
+        // TODO
+        // require(
+        //     MerkleProof.verify(_merkleProof, merkleRoot, node),
+        //     "MerklePools: INVALID_PROOF"
+        // );
+
         MerkleStake.Data storage _stake = stakes[msg.sender][_poolId];
         uint256 alreadyClaimedLPAmount = _stake.totalClaimedLP;
-        
+        uint256 alreadyClaimedTICAmount = _stake.totalClaimedTIC;
+
         require(
-            _totalLPTokenAmount - alreadyClaimedLPAmount >= _claimLPTokenAmount,
+            _totalLPTokenAmount > alreadyClaimedLPAmount && _totalTICAmount > alreadyClaimedTICAmount,
             "MerklePools: INVALID_CLAIM_AMOUNT"
         );
 
         MerklePool.Data storage _pool = _pools.get(_poolId);
-        
         _pool.update(poolContext);
         _stake.update(_pool, poolContext);
 
-        require(_quoteTokenAmount <= _stake.totalUnclaimed, "MerklePools: INVALID_UNCLAIMED");
-        _stake.totalClaimedLP = alreadyClaimedLPAmount + _claimLPTokenAmount;
+        // determine the amounts of the new claim
+        uint256 lpTokenAmountToBeClaimed = _totalLPTokenAmount - alreadyClaimedLPAmount;  
+        uint256 ticTokenAmountToBeClaimed =  _totalTICAmount - alreadyClaimedTICAmount;
         
-        unchecked {
-          _stake.totalUnclaimed -= _quoteTokenAmount;  
-        }
-        _pool.totalUnclaimed -= _quoteTokenAmount;
+        require(
+            ticTokenAmountToBeClaimed <= _stake.totalUnclaimed,
+            "MerklePools: INVALID_UNCLAIMED"
+        );
 
-        elasticLPToken.safeTransfer(msg.sender, _claimLPTokenAmount);
-        emit TokensClaimed(msg.sender, _poolId, _index, _claimLPTokenAmount);
+        _stake.totalClaimedLP = _totalLPTokenAmount;
+        _stake.totalClaimedTIC = _totalTICAmount;
+
+        unchecked {
+            _stake.totalUnclaimed -= ticTokenAmountToBeClaimed;
+        }
+        _pool.totalUnclaimedTIC -= ticTokenAmountToBeClaimed;
+        _pool.totalUnclaimedTICInLP -= ticTokenAmountToBeClaimed;
+
+        elasticLPToken.safeTransfer(msg.sender, lpTokenAmountToBeClaimed);
+        emit TokensClaimed(msg.sender, _poolId, _index, lpTokenAmountToBeClaimed);
     }
 
     /**
@@ -555,5 +561,4 @@ contract MerklePools is ReentrancyGuard {
 
         emit TokensWithdrawn(msg.sender, _poolId, _withdrawAmount);
     }
-
 }
