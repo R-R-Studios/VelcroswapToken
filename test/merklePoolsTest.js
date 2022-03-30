@@ -2,6 +2,12 @@ const { expect } = require("chai");
 const { ethers, deployments, getNamedAccounts } = require("hardhat");
 const exchangeArtifact = require("@elasticswap/elasticswap/artifacts/src/contracts/Exchange.sol/Exchange.json");
 
+const { BalanceTree } = require("../src/utils/BalanceTree");
+const { parseBalanceMap } = require("../src/utils/parseBalanceMap");
+
+const ZERO_BYTES32 =
+  "0x0000000000000000000000000000000000000000000000000000000000000000";
+
 describe("MerklePools", () => {
   let accounts;
   let exchangeFactory;
@@ -91,7 +97,7 @@ describe("MerklePools", () => {
 
   describe("constructor", () => {
     it("Properly sets initial variables", async () => {
-      expect(await merklePools.baseToken()).to.eq(ticToken.address);
+      expect(await merklePools.ticToken()).to.eq(ticToken.address);
       expect(await merklePools.quoteToken()).to.eq(usdcToken.address);
       expect(await merklePools.elasticLPToken()).to.eq(exchange.address);
       expect(await merklePools.governance()).to.eq(accounts[0].address);
@@ -103,6 +109,13 @@ describe("MerklePools", () => {
       // clean start
       expect(await usdcToken.balanceOf(exchange.address)).to.eq(0);
       expect(await ticToken.balanceOf(exchange.address)).to.eq(0);
+      const staker1 = accounts[2];
+      const staker1TIC = ethers.utils.parseUnits("200", 18);
+      await ticToken.mint(staker1.address, staker1TIC);
+
+      // stake tic
+      await ticToken.connect(staker1).approve(merklePools.address, staker1TIC);
+      await merklePools.connect(staker1).deposit(0, staker1TIC);
 
       // add approval for usdc
       await usdcToken.approve(
@@ -112,9 +125,18 @@ describe("MerklePools", () => {
 
       const usdcToAdd = ethers.utils.parseUnits("100", 18);
       const ticToBeMinted = usdcToAdd.div(10); // TIC = $10USDC
-      const expirationTimestamp = Math.round(Date.now() / 1000 + 60);
+      
+      
+      const start = Math.round(Date.now() / 1000);
+      const futureTime = start + 60*60*60*24*365
+      const expirationTimestamp = futureTime + 600;
+
+      await ethers.provider.send("evm_setNextBlockTimestamp", [futureTime]);
+      await ethers.provider.send("evm_mine");
+      
       await expect(
         merklePools.generateLPTokens(
+          0,
           ticToBeMinted,
           usdcToAdd,
           ticToBeMinted.sub(1),
@@ -132,7 +154,7 @@ describe("MerklePools", () => {
   });
 
   describe("getPoolTotalUnclaimed", () => {
-    it.only("Handles 2 stakers in 1 pools correctly", async () => {
+    it("Handles 2 stakers in 1 pools correctly", async () => {
       const staker1 = accounts[2];
       const staker2 = accounts[3];
 
@@ -417,6 +439,51 @@ describe("MerklePools", () => {
       expect(await exchange.balanceOf(accounts[0].address)).to.equal(
         balanceToClaim
       );
+    });
+  });
+
+  describe("setMerkleRoot", () => {
+    let tree;
+
+    beforeEach(async () => {
+      tree = new BalanceTree([
+        {
+          account: accounts[1].address,
+          poolId: 0,
+          totalLPTokenAmount: ethers.BigNumber.from(100),
+          totalTICAmount: ethers.BigNumber.from(10000),
+        },
+        {
+          account: accounts[2].address,
+          poolId: 0,
+          totalLPTokenAmount: ethers.BigNumber.from(150),
+          totalTICAmount: ethers.BigNumber.from(15000),
+        },
+        {
+          account: accounts[3].address,
+          poolId: 0,
+          totalLPTokenAmount: ethers.BigNumber.from(150),
+          totalTICAmount: ethers.BigNumber.from(15000),
+        },
+      ]);
+    });
+
+    it("can be set by owner", async () => {
+      expect(await merklePools.merkleRoot()).to.be.equal(ZERO_BYTES32);
+      await merklePools.setMerkleRoot(tree.getHexRoot());
+      expect(await merklePools.merkleRoot()).to.be.equal(tree.getHexRoot());
+    });
+
+    it("reverts when set by non owner", async () => {
+      await expect(
+        merklePools.connect(accounts[1]).setMerkleRoot(tree.getHexRoot())
+      ).to.be.revertedWith("MerklePools: only governance");
+    });
+
+    it("emits MerkleRootUpdated", async () => {
+      await expect(await merklePools.setMerkleRoot(tree.getHexRoot()))
+        .to.emit(merklePools, "MerkleRootUpdated")
+        .withArgs(tree.getHexRoot());
     });
   });
 });

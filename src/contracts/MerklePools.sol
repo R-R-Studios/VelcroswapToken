@@ -365,8 +365,8 @@ contract MerklePools is ReentrancyGuard {
             keccak256(
                 abi.encodePacked(
                     _index,
-                    _poolId,
                     msg.sender,
+                    _poolId,
                     _totalLPTokenAmount,
                     _totalTICAmount
                 )
