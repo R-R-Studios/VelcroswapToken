@@ -28,6 +28,8 @@ contract MerklePools is ReentrancyGuard {
 
     event GovernanceUpdated(address governance);
 
+    event ForfeitAddressUpdated(address governance);
+
     event RewardRateUpdated(uint256 rewardRate);
 
     event PoolRewardWeightUpdated(uint256 indexed poolId, uint256 rewardWeight);
@@ -83,7 +85,8 @@ contract MerklePools is ReentrancyGuard {
         IMintableERC20 _ticToken,
         IERC20 _quoteToken,
         IERC20 _elasticLPToken,
-        address _governance
+        address _governance,
+        address _forfeitAddress
     ) {
         require(
             _governance != address(0),
@@ -94,6 +97,7 @@ contract MerklePools is ReentrancyGuard {
         governance = _governance;
         elasticLPToken = _elasticLPToken;
         quoteToken = _quoteToken;
+        forfeitAddress = _forfeitAddress;
 
         // grant approval to exchange so we can mint
         ticToken.approve(address(_elasticLPToken), type(uint256).max);
@@ -128,7 +132,7 @@ contract MerklePools is ReentrancyGuard {
     function acceptGovernance() external {
         require(
             msg.sender == pendingGovernance,
-            "StakingPools: only pending governance"
+            "MerklePools: only pending governance"
         );
 
         address _pendingGovernance = pendingGovernance;
@@ -147,6 +151,15 @@ contract MerklePools is ReentrancyGuard {
         poolContext.rewardRate = _rewardRate;
 
         emit RewardRateUpdated(_rewardRate);
+    }
+
+    function setForfeitAddress(address _forfeitAddress) external onlyGovernance {
+      require(
+            _forfeitAddress != forfeitAddress,
+            "MerklePools: SAME_ADDRESS"
+      );
+      forfeitAddress = _forfeitAddress;
+      emit ForfeitAddressUpdated(_forfeitAddress);
     }
 
     /**
@@ -231,6 +244,7 @@ contract MerklePools is ReentrancyGuard {
         external
         nonReentrant
     {
+        require(msg.sender != forfeitAddress, "MerklePools: UNUSABLE_ADDRESS");
         MerklePool.Data storage _pool = _pools.get(_poolId);
         _pool.update(poolContext);
 
@@ -259,11 +273,15 @@ contract MerklePools is ReentrancyGuard {
         _pool.totalDeposited = _pool.totalDeposited - withdrawAmount;
         _stake.totalDeposited = 0;
 
+        // unclaimed rewards are transferred to the forfeit address
+        MerkleStake.Data storage forfeitStake = stakes[forfeitAddress][_poolId];
+        forfeitStake.update(_pool, poolContext);
+
+        forfeitStake.totalUnclaimed += _stake.totalUnclaimed;
+        _stake.totalUnclaimed = 0;
+
         _pool.token.safeTransfer(msg.sender, withdrawAmount);
-
         emit TokensWithdrawn(msg.sender, _poolId, withdrawAmount);
-
-        // TODO: handle unclaimed rewards!
     }
 
     /**
@@ -386,7 +404,7 @@ contract MerklePools is ReentrancyGuard {
 
         require(
             ticTokenAmountToBeClaimed <= _stake.totalUnclaimed,
-            "MerklePools: INVALID_UNCLAIMED"
+            "MerklePools: INVALID_UNCLAIMED_AMOUNT"
         );
 
         _stake.totalClaimedLP = _totalLPTokenAmount;
@@ -555,23 +573,5 @@ contract MerklePools is ReentrancyGuard {
             MerklePool.Data storage _pool = _pools.get(_poolId);
             _pool.update(poolContext);
         }
-    }
-
-    /**
-     * @dev Withdraws staked tokens from a pool.
-     * The pool and stake MUST be updated before calling this function.
-     * @param _poolId          The pool to withdraw staked tokens from.
-     * @param _withdrawAmount  The number of tokens to withdraw.
-     */
-    function _withdraw(uint256 _poolId, uint256 _withdrawAmount) internal {
-        MerklePool.Data storage _pool = _pools.get(_poolId);
-        MerkleStake.Data storage _stake = stakes[msg.sender][_poolId];
-
-        _pool.totalDeposited = _pool.totalDeposited - _withdrawAmount;
-        _stake.totalDeposited = _stake.totalDeposited - _withdrawAmount;
-
-        _pool.token.safeTransfer(msg.sender, _withdrawAmount);
-
-        emit TokensWithdrawn(msg.sender, _poolId, _withdrawAmount);
     }
 }
