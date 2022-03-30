@@ -21,6 +21,7 @@ library MerklePool {
     struct Data {
         IERC20 token;
         uint256 totalDeposited;
+        uint256 totalUnclaimed;
         uint256 rewardWeight;
         FixedPointMath.FixedDecimal accumulatedRewardWeight;
         uint256 lastUpdatedBlockTimestamp;
@@ -37,6 +38,9 @@ library MerklePool {
         _data.accumulatedRewardWeight = _data.getUpdatedAccumulatedRewardWeight(
             _ctx
         );
+
+        // TODO: make this more gas efficient! we calc it twice!
+        _data.totalUnclaimed = _data.getUpdatedTotalUnclaimed(_ctx);
         _data.lastUpdatedBlockTimestamp = block.timestamp;
     }
 
@@ -50,6 +54,10 @@ library MerklePool {
         view
         returns (uint256)
     {
+        if(_ctx.totalRewardWeight == 0){
+          return 0;
+        }
+        
         return (_ctx.rewardRate * _data.rewardWeight) / _ctx.totalRewardWeight;
     }
 
@@ -65,16 +73,7 @@ library MerklePool {
         if (_data.totalDeposited == 0) {
             return _data.accumulatedRewardWeight;
         }
-
-        uint256 _elapsedTime =
-            block.timestamp - _data.lastUpdatedBlockTimestamp;
-        if (_elapsedTime == 0) {
-            return _data.accumulatedRewardWeight;
-        }
-
-        uint256 _rewardRate = _data.getRewardRate(_ctx);
-        uint256 _amountToDistribute = _rewardRate * _elapsedTime;
-
+        uint256 _amountToDistribute = _data.getUpdatedAmountToDistribute(_ctx);
         if (_amountToDistribute == 0) {
             return _data.accumulatedRewardWeight;
         }
@@ -83,31 +82,32 @@ library MerklePool {
             FixedPointMath.fromU256(_amountToDistribute).div(
                 _data.totalDeposited
             );
+
         return _data.accumulatedRewardWeight.add(_rewardWeight);
     }
 
-    // function getUpdatedTotalUnclaimed(
-    //     Data storage _data,
-    //     Context storage _ctx
-    // ) internal view returns (uint256) {
-    //     FixedPointMath.FixedDecimal memory _currentAccumulatedWeight = _data.getUpdatedAccumulatedRewardWeight(_ctx);
-    //     FixedPointMath.FixedDecimal memory _lastAccumulatedWeight =
-    //         _data.accumulatedRewardWeight;
+    function getUpdatedAmountToDistribute(
+        Data storage _data,
+        Context storage _ctx
+    ) internal view returns (uint256) {
+        uint256 _elapsedTime =
+            block.timestamp - _data.lastUpdatedBlockTimestamp;
 
-    //     if (_currentAccumulatedWeight.cmp(_lastAccumulatedWeight) == 0) {
-    //         return _self.totalUnclaimed;
-    //     }
+        if (_elapsedTime == 0) {
+            return 0;
+        }
 
-    //     uint256 _amountToDistribute =
-    //         _currentAccumulatedWeight
-    //             .sub(_lastAccumulatedWeight)
-    //             .mul(_data.totalDeposited)
-    //             .decode();
+        uint256 _rewardRate = _data.getRewardRate(_ctx);
+        return _rewardRate * _elapsedTime;
+    }
 
-    //     return _self.totalUnclaimed + _amountToDistribute;
-    // }
-
-
+    function getUpdatedTotalUnclaimed(Data storage _data, Context storage _ctx)
+        internal
+        view
+        returns (uint256)
+    {
+        return _data.totalUnclaimed + _data.getUpdatedAmountToDistribute(_ctx);
+    }
 
     /// @dev Adds an element to the list.
     ///

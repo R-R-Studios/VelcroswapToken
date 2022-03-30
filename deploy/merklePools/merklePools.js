@@ -48,9 +48,4 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   }
 };
 module.exports.tags = ["MerklePools"];
-module.exports.dependencies = [
-  "Pool",
-  "Stake",
-  "FixedPointMath",
-  "TicToken",
-];
+module.exports.dependencies = ["Pool", "Stake", "FixedPointMath", "TicToken"];

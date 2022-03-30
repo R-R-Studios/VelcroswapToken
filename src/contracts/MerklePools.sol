@@ -64,15 +64,14 @@ contract MerklePools is ReentrancyGuard {
     address public pendingGovernance;
 
     bytes32 public merkleRoot;
-    mapping(address => uint256) public claimedAmount; // claimee address -> claimed LP amount.
     bool public isClaimsEnabled = false;
 
     // Tokens are mapped to their pool identifier plus one. Tokens that do not have an associated pool
     // will return an identifier of zero.
     mapping(IERC20 => uint256) public tokenPoolIds;
 
-    MerklePool.Context public poolContext;  // The context shared between the pools.
-    MerklePool.List private _pools;         // A list of all of the pools.
+    MerklePool.Context public poolContext; // The context shared between the pools.
+    MerklePool.List private _pools; // A list of all of the pools.
 
     // mapping of all of the user stakes mapped first by pool and then by address.
     mapping(address => mapping(uint256 => MerkleStake.Data)) public stakes;
@@ -97,7 +96,7 @@ contract MerklePools is ReentrancyGuard {
         baseToken.approve(address(_elasticLPToken), type(uint256).max);
         quoteToken.approve(address(_elasticLPToken), type(uint256).max);
     }
- 
+
     /**
      * @dev A modifier which reverts when the caller is not the governance.
      */
@@ -109,7 +108,7 @@ contract MerklePools is ReentrancyGuard {
     /**
      * @dev Sets the governance. This function can only called by the current governance.
      * @param _pendingGovernance the new pending governance.
-     */    
+     */
     function setPendingGovernance(address _pendingGovernance)
         external
         onlyGovernance
@@ -148,7 +147,7 @@ contract MerklePools is ReentrancyGuard {
     }
 
     /**
-     * @dev Creates a new pool. The created pool will need to have its reward weight 
+     * @dev Creates a new pool. The created pool will need to have its reward weight
      * initialized before it begins generating rewards.
      * @param _token The token the pool will accept for staking.
      * @return the identifier for the newly created pool.
@@ -186,7 +185,7 @@ contract MerklePools is ReentrancyGuard {
     /**
      * @dev Sets the reward weights of all of the pools.
      * @param _rewardWeights The reward weights of all of the pools.
-     */    
+     */
     function setRewardWeights(uint256[] calldata _rewardWeights)
         external
         onlyGovernance
@@ -238,7 +237,6 @@ contract MerklePools is ReentrancyGuard {
         _deposit(_poolId, _depositAmount);
     }
 
-
     // /**
     //  * @dev Claims all rewarded tokens from a pool.
     //  * @param _poolId The pool to claim rewards from.
@@ -265,7 +263,7 @@ contract MerklePools is ReentrancyGuard {
         MerkleStake.Data storage _stake = stakes[msg.sender][_poolId];
         _stake.update(_pool, poolContext);
 
-        _claim(_poolId);
+        //_claim(_poolId);
         _withdraw(_poolId, _stake.totalDeposited);
         // TODO: handle unclaimed rewards!
     }
@@ -280,12 +278,12 @@ contract MerklePools is ReentrancyGuard {
      * @param _expirationTimestamp timestamp that this transaction must occur before (or transaction will revert)
      */
     function generateLPTokens(
-      uint256 _baseTokenQty,
-      uint256 _quoteTokenQty, 
-      uint256 _baseTokenQtyMin, 
-      uint256 _quoteTokenQtyMin,
-      uint256 _expirationTimestamp
-      ) external onlyGovernance {
+        uint256 _baseTokenQty,
+        uint256 _quoteTokenQty,
+        uint256 _baseTokenQtyMin,
+        uint256 _quoteTokenQtyMin,
+        uint256 _expirationTimestamp
+    ) external onlyGovernance {
         // TODO: Check that we have enough unclaim TIC to generate the amount requested
         // TODO: Check to see if we have any excess TIC we can use to avoid another mint
         // this could occur due to slippage in the addLiq call
@@ -293,19 +291,19 @@ contract MerklePools is ReentrancyGuard {
         quoteToken.safeTransferFrom(msg.sender, address(this), _quoteTokenQty);
         uint256 balanceBefore = elasticLPToken.balanceOf(address(this));
         Exchange(address(elasticLPToken)).addLiquidity(
-          _baseTokenQty, 
-          _quoteTokenQty,
-          _baseTokenQtyMin,
-          _quoteTokenQtyMin,
-          address(this),
-          _expirationTimestamp
+            _baseTokenQty,
+            _quoteTokenQty,
+            _baseTokenQtyMin,
+            _quoteTokenQtyMin,
+            address(this),
+            _expirationTimestamp
         );
-        uint256 balanceCreated = elasticLPToken.balanceOf(address(this)) - balanceBefore;
+        uint256 balanceCreated =
+            elasticLPToken.balanceOf(address(this)) - balanceBefore;
         require(balanceCreated != 0, "MerklePools: NO_LP_CREATED");
         emit LPTokensGenerated(balanceCreated);
-        // TODO: should we burn any "extra TIC" not consumed here? TIC has no burn, 
+        // TODO: should we burn any "extra TIC" not consumed here? TIC has no burn,
         // so we would have to send to 0x0...
-
 
         // TODO: we now need to update globally against the claimable TIC total...
         // we should track this and subtract from that global?
@@ -322,48 +320,59 @@ contract MerklePools is ReentrancyGuard {
     }
 
     /**
-     * @notice Allows the contract owner (the DAO) to set a new fee amount to be collected on claiming
+     * @notice TODO: FIX ME Allows the contract owner (the DAO) to set a new fee amount to be collected on claiming
      * @param _index the index of the merkle claim
-     * @param _totalTokenAmount the total lambda amount in the tree
-     * @param _claimTokenAmount the amount the users desires to claim
+     * @param _totalLPTokenAmount the total lambda amount in the tree
+     * @param _claimLPTokenAmount the amount the users desires to claim
+     * @param _quoteTokenAmount the amount the users desires to claim
+     * @param _poolId the pool id these rewards are associated with.
      * @param _merkleProof bytes32[] proof for the claim
      */
     function claim(
         uint256 _index,
-        uint256 _totalTokenAmount,
-        uint256 _claimTokenAmount,
+        uint256 _totalLPTokenAmount,
+        uint256 _claimLPTokenAmount,
+        uint256 _quoteTokenAmount,
+        uint256 _poolId,
         bytes32[] calldata _merkleProof
     ) external {
-        //TODO: NEED TO UPDATE THEIR STAKE!!!
-        
         require(
-            _claimTokenAmount <= _totalTokenAmount,
+            _claimLPTokenAmount <= _totalLPTokenAmount,
             "MerklePools: INVALID_CLAIM_AMOUNT"
         );
 
         // Verify the merkle proof.
         bytes32 node =
-            keccak256(abi.encodePacked(_index, msg.sender, _totalTokenAmount));
+            keccak256(abi.encodePacked(_index, msg.sender, _totalLPTokenAmount, _quoteTokenAmount, _poolId));
+        
         require(
             MerkleProof.verify(_merkleProof, merkleRoot, node),
             "MerklePools: INVALID_PROOF"
         );
-
-        uint256 alreadyClaimedLambdaAmount = claimedAmount[msg.sender];
+        
+        MerkleStake.Data storage _stake = stakes[msg.sender][_poolId];
+        uint256 alreadyClaimedLPAmount = _stake.totalClaimedLP;
+        
         require(
-            _totalTokenAmount - alreadyClaimedLambdaAmount >=
-                _claimTokenAmount,
+            _totalLPTokenAmount - alreadyClaimedLPAmount >= _claimLPTokenAmount,
             "MerklePools: INVALID_CLAIM_AMOUNT"
         );
 
-        claimedAmount[msg.sender] =
-            alreadyClaimedLambdaAmount +
-            _claimTokenAmount;
+        MerklePool.Data storage _pool = _pools.get(_poolId);
+        
+        _pool.update(poolContext);
+        _stake.update(_pool, poolContext);
 
-        // Figure out which pool this is from!
-        uint256 poolId;
-        elasticLPToken.safeTransfer(msg.sender, _claimTokenAmount);
-        emit TokensClaimed(msg.sender, poolId, _index, _claimTokenAmount);
+        require(_quoteTokenAmount <= _stake.totalUnclaimed, "MerklePools: INVALID_UNCLAIMED");
+        _stake.totalClaimedLP = alreadyClaimedLPAmount + _claimLPTokenAmount;
+        
+        unchecked {
+          _stake.totalUnclaimed -= _quoteTokenAmount;  
+        }
+        _pool.totalUnclaimed -= _quoteTokenAmount;
+
+        elasticLPToken.safeTransfer(msg.sender, _claimLPTokenAmount);
+        emit TokensClaimed(msg.sender, _poolId, _index, _claimLPTokenAmount);
     }
 
     /**
@@ -385,14 +394,14 @@ contract MerklePools is ReentrancyGuard {
     /**
      * @dev Gets the number of pools that exist.
      * @return the pool count.
-     */    
+     */
     function poolCount() external view returns (uint256) {
         return _pools.length();
     }
 
     /**
      * @dev Gets the token a pool accepts.
-     * @param _poolId the identifier of the pool. 
+     * @param _poolId the identifier of the pool.
      * @return the token.
      */
     function getPoolToken(uint256 _poolId) external view returns (IERC20) {
@@ -401,12 +410,16 @@ contract MerklePools is ReentrancyGuard {
     }
 
     /**
-     * @dev Gets the pool data struct 
-     * @param _poolId the identifier of the pool. 
+     * @dev Gets the pool data struct
+     * @param _poolId the identifier of the pool.
      * @return the Pool.Data (memory, not storage!).
      */
-    function getPool(uint256 _poolId) external view returns (MerklePool.Data memory) {
-      return _pools.get(_poolId);
+    function getPool(uint256 _poolId)
+        external
+        view
+        returns (MerklePool.Data memory)
+    {
+        return _pools.get(_poolId);
     }
 
     /**
@@ -424,7 +437,21 @@ contract MerklePools is ReentrancyGuard {
     }
 
     /**
-     * @dev Gets the reward weight of a pool which determines 
+     * @dev Gets the total amount of token unclaimed from a pool
+     * @param _poolId the identifier of the pool.
+     * @return the total amount of unclaimed / un-minted tokens from a pool
+     */
+    function getPoolTotalUnclaimed(uint256 _poolId)
+        external
+        view
+        returns (uint256)
+    {
+        MerklePool.Data storage _pool = _pools.get(_poolId);
+        return _pool.getUpdatedTotalUnclaimed(poolContext);
+    }
+
+    /**
+     * @dev Gets the reward weight of a pool which determines
      * how much of the total rewards it receives per second.
      * @param _poolId the identifier of the pool.
      * @return the pool reward weight.
@@ -466,7 +493,7 @@ contract MerklePools is ReentrancyGuard {
         MerkleStake.Data storage _stake = stakes[_account][_poolId];
         return _stake.totalDeposited;
     }
- 
+
     /**
      * @dev Gets the number of unclaimed reward tokens a user can claim from a pool.
      * @param _account The account to get the unclaimed balance of.
@@ -479,7 +506,8 @@ contract MerklePools is ReentrancyGuard {
         returns (uint256)
     {
         MerkleStake.Data storage _stake = stakes[_account][_poolId];
-        return _stake.getUpdatedTotalUnclaimed(_pools.get(_poolId), poolContext);
+        return
+            _stake.getUpdatedTotalUnclaimed(_pools.get(_poolId), poolContext);
     }
 
     /**
@@ -491,7 +519,7 @@ contract MerklePools is ReentrancyGuard {
             _pool.update(poolContext);
         }
     }
- 
+
     /**
      * @dev Stakes tokens into a pool.
      * The pool and stake MUST be updated before calling this function.
@@ -528,22 +556,4 @@ contract MerklePools is ReentrancyGuard {
         emit TokensWithdrawn(msg.sender, _poolId, _withdrawAmount);
     }
 
-    /**
-     * @dev Claims all rewarded tokens from a pool. 
-     * The pool and stake MUST be updated before calling this function.
-     * @param _poolId The pool to claim rewards from.
-     * @notice use this function to claim the tokens from a corresponding pool by ID.
-     */
-    function _claim(uint256 _poolId) internal {
-        MerkleStake.Data storage _stake = stakes[msg.sender][_poolId];
-
-        uint256 _claimAmount = _stake.totalUnclaimed;
-        _stake.totalUnclaimed = 0;
-
-        baseToken.mint(msg.sender, _claimAmount);
-
-        //emit TokensClaimed(msg.sender, _poolId, _claimAmount);
-        //TODO: FIXME (need event)
-        //emit TokensClaimed(msg.sender, poolId, _index _claimTokenAmount);
-    }
 }

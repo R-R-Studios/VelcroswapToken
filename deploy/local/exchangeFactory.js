@@ -1,9 +1,9 @@
-const ExchangeFactory = require('@elasticswap/elasticswap/artifacts/src/contracts/ExchangeFactory.sol/ExchangeFactory.json');
+const ExchangeFactory = require("@elasticswap/elasticswap/artifacts/src/contracts/ExchangeFactory.sol/ExchangeFactory.json");
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const { deploy, log } = deployments;
   const namedAccounts = await getNamedAccounts();
-  const { admin, feeRecipient} = namedAccounts;
+  const { admin, feeRecipient } = namedAccounts;
 
   const mathLib = await deployments.get("MathLib");
   const safeMetaDataLib = await deployments.get("SafeMetadata");

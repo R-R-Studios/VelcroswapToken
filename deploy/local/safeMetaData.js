@@ -1,4 +1,4 @@
-const SafeMetadata = require('@elasticswap/elasticswap/artifacts/src/libraries/SafeMetadata.sol/SafeMetadata.json');
+const SafeMetadata = require("@elasticswap/elasticswap/artifacts/src/libraries/SafeMetadata.sol/SafeMetadata.json");
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const { deploy, log } = deployments;

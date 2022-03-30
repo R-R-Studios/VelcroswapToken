@@ -15,6 +15,7 @@ library MerkleStake {
     struct Data {
         uint256 totalDeposited;
         uint256 totalUnclaimed;
+        uint256 totalClaimedLP;
         FixedPointMath.FixedDecimal lastAccumulatedWeight;
     }
 

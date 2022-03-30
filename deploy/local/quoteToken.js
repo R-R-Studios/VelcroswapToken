@@ -1,4 +1,4 @@
-const ERC20PresetFixedSupply = require('@elasticswap/elasticswap/artifacts/@openzeppelin/contracts/token/ERC20/presets/ERC20PresetFixedSupply.sol/ERC20PresetFixedSupply.json');
+const ERC20PresetFixedSupply = require("@elasticswap/elasticswap/artifacts/@openzeppelin/contracts/token/ERC20/presets/ERC20PresetFixedSupply.sol/ERC20PresetFixedSupply.json");
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const { deploy, log } = deployments;
