@@ -207,97 +207,216 @@ describe("MerklePools", () => {
       // generate LP tokens so we can claim some!
       const ticToMint = unclaimedAtEndOfYear2.div(20); // 5% of rewards are going to be issued
       const ticPrice = 10;
-      const usdcToAdd = ticToMint.div(ticPrice); 
+      const usdcToAdd = ticToMint.div(ticPrice);
       expect(await exchange.balanceOf(merklePools.address)).to.equal(0);
       await usdcToken.approve(merklePools.address, usdcToAdd);
-      await merklePools.generateLPTokens(0, ticToMint, usdcToAdd, ticToMint.sub(1), usdcToAdd.sub(1), endOfYear2+6000);
-      
+      await merklePools.generateLPTokens(
+        0,
+        ticToMint,
+        usdcToAdd,
+        ticToMint.sub(1),
+        usdcToAdd.sub(1),
+        endOfYear2 + 6000
+      );
+
       const lpTokenBalance = await exchange.balanceOf(merklePools.address);
       const ticPerLP = ticToMint.div(lpTokenBalance);
-      
-      let staker2unclaimedTic = await merklePools.getStakeTotalUnclaimed(staker2.address, 0);
-      let staker1unclaimedTic = await merklePools.getStakeTotalUnclaimed(staker1.address, 0);
-      const lpTokenForStaker2 = lpTokenBalance.mul(staker2unclaimedTic).div(unclaimedAtEndOfYear2);
-      const lpTokenForStaker1 = lpTokenBalance.mul(staker1unclaimedTic).div(unclaimedAtEndOfYear2);
-      
+
+      let staker2unclaimedTic = await merklePools.getStakeTotalUnclaimed(
+        staker2.address,
+        0
+      );
+      let staker1unclaimedTic = await merklePools.getStakeTotalUnclaimed(
+        staker1.address,
+        0
+      );
+      const lpTokenForStaker2 = lpTokenBalance
+        .mul(staker2unclaimedTic)
+        .div(unclaimedAtEndOfYear2);
+      const lpTokenForStaker1 = lpTokenBalance
+        .mul(staker1unclaimedTic)
+        .div(unclaimedAtEndOfYear2);
+
       const ticConsumedFromStaker2 = lpTokenForStaker2.mul(ticPerLP);
       const ticConsumedFromStaker1 = lpTokenForStaker1.mul(ticPerLP);
 
       expect(await exchange.balanceOf(staker2.address)).to.equal(0);
-      await merklePools.connect(staker2).claim(0, 0, lpTokenForStaker2, ticConsumedFromStaker2, []);
-      expect(await exchange.balanceOf(staker2.address)).to.equal(lpTokenForStaker2);
-      const diffFromExpectedUnclaimed = (await merklePools.getStakeTotalUnclaimed(staker2.address, 0)).sub(
-        staker2unclaimedTic.sub(ticConsumedFromStaker2)
+      await merklePools
+        .connect(staker2)
+        .claim(0, 0, lpTokenForStaker2, ticConsumedFromStaker2, []);
+      expect(await exchange.balanceOf(staker2.address)).to.equal(
+        lpTokenForStaker2
       );
-      expect(diffFromExpectedUnclaimed.lt(ethers.utils.parseUnits("1", 18))).to.be.true; // diff of less than 1 tokens
+      const diffFromExpectedUnclaimed = (
+        await merklePools.getStakeTotalUnclaimed(staker2.address, 0)
+      ).sub(staker2unclaimedTic.sub(ticConsumedFromStaker2));
+      expect(diffFromExpectedUnclaimed.lt(ethers.utils.parseUnits("1", 18))).to
+        .be.true; // diff of less than 1 tokens
 
       // check global counts next
       const unclaimedAfterClaim = await merklePools.getPoolTotalUnclaimed(0);
-      const diffFromGlobalUnclaimed = unclaimedAfterClaim.sub(unclaimedAtEndOfYear2.sub(ticConsumedFromStaker2));
-      expect(diffFromGlobalUnclaimed.lt(ethers.utils.parseUnits("1", 18))).to.be.true; // diff of less than 1 tokens
+      const diffFromGlobalUnclaimed = unclaimedAfterClaim.sub(
+        unclaimedAtEndOfYear2.sub(ticConsumedFromStaker2)
+      );
+      expect(diffFromGlobalUnclaimed.lt(ethers.utils.parseUnits("1", 18))).to.be
+        .true; // diff of less than 1 tokens
 
       // have staker1 claim the rest of the available LP
       expect(await exchange.balanceOf(staker1.address)).to.equal(0);
-      await merklePools.connect(staker1).claim(0, 0, lpTokenForStaker1, ticConsumedFromStaker1, []);
-      expect(await exchange.balanceOf(staker1.address)).to.equal(lpTokenForStaker1);
-      expect((await exchange.balanceOf(merklePools.address)).lt(ethers.utils.parseUnits("1", 18))).to.be.true; // diff of less than 1 tokens
+      await merklePools
+        .connect(staker1)
+        .claim(0, 0, lpTokenForStaker1, ticConsumedFromStaker1, []);
+      expect(await exchange.balanceOf(staker1.address)).to.equal(
+        lpTokenForStaker1
+      );
+      expect(
+        (await exchange.balanceOf(merklePools.address)).lt(
+          ethers.utils.parseUnits("1", 18)
+        )
+      ).to.be.true; // diff of less than 1 tokens
 
       // we have no stakers left, but still have unclaimed rewards, generate them and claim!
       const totalUnclaimed = await merklePools.getPoolTotalUnclaimedNotInLP(0);
-      staker1unclaimedTic = await merklePools.getStakeTotalUnclaimed(staker1.address, 0);
-      staker2unclaimedTic = await merklePools.getStakeTotalUnclaimed(staker2.address, 0);
-      expect(totalUnclaimed.sub(staker1unclaimedTic.add(staker2unclaimedTic)).lt(ethers.utils.parseUnits("2", 18))).to.be.true
-
+      staker1unclaimedTic = await merklePools.getStakeTotalUnclaimed(
+        staker1.address,
+        0
+      );
+      staker2unclaimedTic = await merklePools.getStakeTotalUnclaimed(
+        staker2.address,
+        0
+      );
+      expect(
+        totalUnclaimed
+          .sub(staker1unclaimedTic.add(staker2unclaimedTic))
+          .lt(ethers.utils.parseUnits("2", 18))
+      ).to.be.true;
 
       const ticToMint2 = totalUnclaimed;
-      const usdcToAdd2 = ticToMint2.div(ticPrice); 
+      const usdcToAdd2 = ticToMint2.div(ticPrice);
       await usdcToken.approve(merklePools.address, usdcToAdd2);
-      await merklePools.generateLPTokens(0, ticToMint2, usdcToAdd2, ticToMint2.sub(1), usdcToAdd2.sub(1), endOfYear2+6000);
+      await merklePools.generateLPTokens(
+        0,
+        ticToMint2,
+        usdcToAdd2,
+        ticToMint2.sub(1),
+        usdcToAdd2.sub(1),
+        endOfYear2 + 6000
+      );
       const lpTokensToDistro = await exchange.balanceOf(merklePools.address);
-      const totalUnclaimedInStakes = staker1unclaimedTic.add(staker2unclaimedTic);
-      
-      const lptTokensTotalForStaker1 = lpTokenForStaker1.add(lpTokensToDistro.mul(staker1unclaimedTic).div(totalUnclaimedInStakes));
-      const lptTokensTotalForStaker2 = lpTokenForStaker2.add(lpTokensToDistro.mul(staker2unclaimedTic).div(totalUnclaimedInStakes));
+      const totalUnclaimedInStakes =
+        staker1unclaimedTic.add(staker2unclaimedTic);
 
-      expect((await merklePools.getPoolTotalUnclaimedNotInLP(0)).lt(ethers.utils.parseUnits("1", 18))).to.be.true
-      await merklePools.connect(staker1).claim(0, 0, lptTokensTotalForStaker1, ticConsumedFromStaker1.add(staker1unclaimedTic), []);
-      await merklePools.connect(staker2).claim(0, 0, lptTokensTotalForStaker2, ticConsumedFromStaker2.add(staker2unclaimedTic), []);
-      expect((await merklePools.getPoolTotalUnclaimedNotInLP(0)).lt(ethers.utils.parseUnits("2", 18))).to.be.true
-      expect((await merklePools.getPoolTotalUnclaimed(0)).lt(ethers.utils.parseUnits("5", 18))).to.be.true
+      const lptTokensTotalForStaker1 = lpTokenForStaker1.add(
+        lpTokensToDistro.mul(staker1unclaimedTic).div(totalUnclaimedInStakes)
+      );
+      const lptTokensTotalForStaker2 = lpTokenForStaker2.add(
+        lpTokensToDistro.mul(staker2unclaimedTic).div(totalUnclaimedInStakes)
+      );
 
-      // fast forward again 
+      expect(
+        (await merklePools.getPoolTotalUnclaimedNotInLP(0)).lt(
+          ethers.utils.parseUnits("1", 18)
+        )
+      ).to.be.true;
+      await merklePools
+        .connect(staker1)
+        .claim(
+          0,
+          0,
+          lptTokensTotalForStaker1,
+          ticConsumedFromStaker1.add(staker1unclaimedTic),
+          []
+        );
+      await merklePools
+        .connect(staker2)
+        .claim(
+          0,
+          0,
+          lptTokensTotalForStaker2,
+          ticConsumedFromStaker2.add(staker2unclaimedTic),
+          []
+        );
+      expect(
+        (await merklePools.getPoolTotalUnclaimedNotInLP(0)).lt(
+          ethers.utils.parseUnits("2", 18)
+        )
+      ).to.be.true;
+      expect(
+        (await merklePools.getPoolTotalUnclaimed(0)).lt(
+          ethers.utils.parseUnits("5", 18)
+        )
+      ).to.be.true;
+
+      // fast forward again
       // advance block time
       const endOfYear3 = endOfYear2 + elapsedTime;
       await ethers.provider.send("evm_setNextBlockTimestamp", [endOfYear3]);
       await ethers.provider.send("evm_mine");
 
-      expect(await merklePools.getStakeTotalDeposited(await merklePools.forfeitAddress(), 0)).to.equal(0);
-      expect(await merklePools.getStakeTotalUnclaimed(await merklePools.forfeitAddress(), 0)).to.equal(0);
+      expect(
+        await merklePools.getStakeTotalDeposited(
+          await merklePools.forfeitAddress(),
+          0
+        )
+      ).to.equal(0);
+      expect(
+        await merklePools.getStakeTotalUnclaimed(
+          await merklePools.forfeitAddress(),
+          0
+        )
+      ).to.equal(0);
 
       //have both stakers exit
       await merklePools.connect(staker1).exit(0);
       await merklePools.connect(staker2).exit(0);
 
-      expect(await merklePools.getStakeTotalDeposited(staker1.address, 0)).to.equal(0);
-      expect(await merklePools.getStakeTotalDeposited(staker2.address, 0)).to.equal(0);
+      expect(
+        await merklePools.getStakeTotalDeposited(staker1.address, 0)
+      ).to.equal(0);
+      expect(
+        await merklePools.getStakeTotalDeposited(staker2.address, 0)
+      ).to.equal(0);
       expect(await merklePools.getPoolTotalDeposited(0)).to.eq(0);
       expect(await ticToken.balanceOf(merklePools.address)).to.equal(0);
 
       // the forfeit address should now have unclaimed tokens!
-      expect(await merklePools.getStakeTotalDeposited(await merklePools.forfeitAddress(), 0)).to.equal(0);
-      const forfeitUnclaimed = await merklePools.getStakeTotalUnclaimed(await merklePools.forfeitAddress(), 0);
+      expect(
+        await merklePools.getStakeTotalDeposited(
+          await merklePools.forfeitAddress(),
+          0
+        )
+      ).to.equal(0);
+      const forfeitUnclaimed = await merklePools.getStakeTotalUnclaimed(
+        await merklePools.forfeitAddress(),
+        0
+      );
       expect(forfeitUnclaimed).to.not.equal(0);
 
-      const ticToMint3 = await merklePools.getPoolTotalUnclaimedNotInLP(0);;
-      const usdcToAdd3 = ticToMint3.div(ticPrice); 
+      const ticToMint3 = await merklePools.getPoolTotalUnclaimedNotInLP(0);
+      const usdcToAdd3 = ticToMint3.div(ticPrice);
       await usdcToken.approve(merklePools.address, usdcToAdd3);
-      await merklePools.generateLPTokens(0, ticToMint3, usdcToAdd3, ticToMint3.sub(1), usdcToAdd3.sub(1), endOfYear3+6000);
-      
-      // let's mint some and see if they can be claimed. 
+      await merklePools.generateLPTokens(
+        0,
+        ticToMint3,
+        usdcToAdd3,
+        ticToMint3.sub(1),
+        usdcToAdd3.sub(1),
+        endOfYear3 + 6000
+      );
+
+      // let's mint some and see if they can be claimed.
       expect(await exchange.balanceOf(accounts[0].address)).to.equal(0);
       const balanceToClaim = await exchange.balanceOf(merklePools.address);
-      await merklePools.claim(0, 0, await exchange.balanceOf(merklePools.address), forfeitUnclaimed, []);
-      expect(await exchange.balanceOf(accounts[0].address)).to.equal(balanceToClaim);
+      await merklePools.claim(
+        0,
+        0,
+        await exchange.balanceOf(merklePools.address),
+        forfeitUnclaimed,
+        []
+      );
+      expect(await exchange.balanceOf(accounts[0].address)).to.equal(
+        balanceToClaim
+      );
     });
   });
 });

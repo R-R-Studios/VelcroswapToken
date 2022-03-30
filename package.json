@@ -31,7 +31,6 @@
   "homepage": "https://github.com/elasticdao/elasticswap#readme",
   "devDependencies": {
     "chai": "^4.3.4",
-    "dotenv": "^16.0.0",
     "eslint": "^7.27.0",
     "eslint-config-airbnb-base": "^14.2.1",
     "eslint-config-prettier": "^8.3.0",
@@ -51,6 +50,7 @@
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@openzeppelin/contracts": "^4.5.0",
     "bignumber.js": "^9.0.2",
+    "dotenv": "^16.0.0",
     "hardhat-contract-sizer": "^2.0.3",
     "hardhat-deploy": "^0.10.6",
     "hardhat-gas-reporter": "^1.0.4",

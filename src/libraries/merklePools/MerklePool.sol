@@ -91,8 +91,7 @@ library MerklePool {
         Data storage _data,
         Context storage _ctx
     ) internal view returns (uint256) {
-        uint256 elapsedTime =
-            block.timestamp - _data.lastUpdatedBlockTimestamp;
+        uint256 elapsedTime = block.timestamp - _data.lastUpdatedBlockTimestamp;
 
         if (elapsedTime == 0) {
             return 0;
@@ -107,7 +106,8 @@ library MerklePool {
         view
         returns (uint256)
     {
-        return _data.totalUnclaimedTIC + _data.getUpdatedAmountToDistribute(_ctx);
+        return
+            _data.totalUnclaimedTIC + _data.getUpdatedAmountToDistribute(_ctx);
     }
 
     /// @dev Adds an element to the list.
