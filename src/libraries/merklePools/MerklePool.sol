@@ -145,8 +145,7 @@ library MerklePool {
     ///
     /// @return the index of the last element.
     function lastIndex(List storage _self) internal view returns (uint256) {
-        uint256 length = _self.length();
-        return length - 1;
+        return _self.length() - 1;
     }
 
     /// @dev Gets the number of elements in the list.

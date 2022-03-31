@@ -214,7 +214,7 @@ contract MerklePools is ReentrancyGuard {
 
         _updatePools();
 
-        uint256 totalRewardWeight = poolContext.totalRewardWeight;
+        uint256 totalRewardWeight_ = poolContext.totalRewardWeight;
         uint256 poolsLength = _pools.length();
         for (uint256 _poolId = 0; _poolId < poolsLength; _poolId++) {
             MerklePool.Data storage _pool = _pools.get(_poolId);
@@ -224,15 +224,15 @@ contract MerklePools is ReentrancyGuard {
                 continue;
             }
 
-            totalRewardWeight =
-                totalRewardWeight -
+            totalRewardWeight_ =
+                totalRewardWeight_ -
                 _currentRewardWeight +
                 _rewardWeights[_poolId];
             _pool.rewardWeight = _rewardWeights[_poolId];
 
             emit PoolRewardWeightUpdated(_poolId, _rewardWeights[_poolId]);
         }
-        poolContext.totalRewardWeight = totalRewardWeight;
+        poolContext.totalRewardWeight = totalRewardWeight_;
     }
 
     /**
@@ -372,13 +372,10 @@ contract MerklePools is ReentrancyGuard {
                 )
             );
 
-        // TODO:
-        // TODO: ENABLE MERKLE PROOF!!!!!!
-        // TODO
-        // require(
-        //     MerkleProof.verify(_merkleProof, merkleRoot, node),
-        //     "MerklePools: INVALID_PROOF"
-        // );
+        require(
+            MerkleProof.verify(_merkleProof, merkleRoot, node),
+            "MerklePools: INVALID_PROOF"
+        );
 
         MerkleStake.Data storage stake = stakes[msg.sender][_poolId];
         uint256 alreadyClaimedLPAmount = stake.totalClaimedLP;

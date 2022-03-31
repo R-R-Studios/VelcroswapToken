@@ -125,15 +125,14 @@ describe("MerklePools", () => {
 
       const usdcToAdd = ethers.utils.parseUnits("100", 18);
       const ticToBeMinted = usdcToAdd.div(10); // TIC = $10USDC
-      
-      
+
       const start = Math.round(Date.now() / 1000);
-      const futureTime = start + 60*60*60*24*365
+      const futureTime = start + 60 * 60 * 60 * 24 * 365;
       const expirationTimestamp = futureTime + 600;
 
       await ethers.provider.send("evm_setNextBlockTimestamp", [futureTime]);
       await ethers.provider.send("evm_mine");
-      
+
       await expect(
         merklePools.generateLPTokens(
           0,
@@ -154,7 +153,7 @@ describe("MerklePools", () => {
   });
 
   describe("getPoolTotalUnclaimed", () => {
-    it("Handles 2 stakers in 1 pools correctly", async () => {
+    it.only("Handles 2 stakers in 1 pools correctly", async () => {
       const staker1 = accounts[2];
       const staker2 = accounts[3];
 
@@ -263,9 +262,38 @@ describe("MerklePools", () => {
       const ticConsumedFromStaker1 = lpTokenForStaker1.mul(ticPerLP);
 
       expect(await exchange.balanceOf(staker2.address)).to.equal(0);
+
+      // generate the tree
+      const tree1 = new BalanceTree([
+        {
+          account: staker1.address,
+          poolId: 0,
+          totalLPTokenAmount: lpTokenForStaker1,
+          totalTICAmount: ticConsumedFromStaker1,
+        },
+        {
+          account: staker2.address,
+          poolId: 0,
+          totalLPTokenAmount: lpTokenForStaker2,
+          totalTICAmount: ticConsumedFromStaker2,
+        },
+      ]);
+
+      // set the root
+      await merklePools.setMerkleRoot(tree1.getHexRoot());
+
+      const proof1 = tree1.getProof(
+        1,
+        staker2.address,
+        0,
+        lpTokenForStaker2,
+        ticConsumedFromStaker2
+      );
+
       await merklePools
         .connect(staker2)
-        .claim(0, 0, lpTokenForStaker2, ticConsumedFromStaker2, []);
+        .claim(1, 0, lpTokenForStaker2, ticConsumedFromStaker2, proof1);
+
       expect(await exchange.balanceOf(staker2.address)).to.equal(
         lpTokenForStaker2
       );
@@ -280,14 +308,24 @@ describe("MerklePools", () => {
       const diffFromGlobalUnclaimed = unclaimedAfterClaim.sub(
         unclaimedAtEndOfYear2.sub(ticConsumedFromStaker2)
       );
-      expect(diffFromGlobalUnclaimed.lt(ethers.utils.parseUnits("1", 18))).to.be
-        .true; // diff of less than 1 tokens
+      expect(diffFromGlobalUnclaimed.lte(ethers.utils.parseUnits("1", 18))).to
+        .be.true; // diff of less than 1 tokens
 
       // have staker1 claim the rest of the available LP
       expect(await exchange.balanceOf(staker1.address)).to.equal(0);
+
+      const proof0 = tree1.getProof(
+        0,
+        staker1.address,
+        0,
+        lpTokenForStaker1,
+        ticConsumedFromStaker1
+      );
+
       await merklePools
         .connect(staker1)
-        .claim(0, 0, lpTokenForStaker1, ticConsumedFromStaker1, []);
+        .claim(0, 0, lpTokenForStaker1, ticConsumedFromStaker1, proof0);
+
       expect(await exchange.balanceOf(staker1.address)).to.equal(
         lpTokenForStaker1
       );
@@ -340,6 +378,43 @@ describe("MerklePools", () => {
           ethers.utils.parseUnits("1", 18)
         )
       ).to.be.true;
+
+      // generate the tree
+      const tree2 = new BalanceTree([
+        {
+          account: staker1.address,
+          poolId: 0,
+          totalLPTokenAmount: lptTokensTotalForStaker1,
+          totalTICAmount: ticConsumedFromStaker1.add(staker1unclaimedTic),
+        },
+        {
+          account: staker2.address,
+          poolId: 0,
+          totalLPTokenAmount: lptTokensTotalForStaker2,
+          totalTICAmount: ticConsumedFromStaker2.add(staker2unclaimedTic),
+        },
+      ]);
+
+      // set the root
+      await merklePools.setMerkleRoot(tree2.getHexRoot());
+
+      // generate proof
+      const proof3 = tree2.getProof(
+        0,
+        staker1.address,
+        0,
+        lptTokensTotalForStaker1,
+        ticConsumedFromStaker1.add(staker1unclaimedTic)
+      );
+
+      const proof4 = tree2.getProof(
+        1,
+        staker2.address,
+        0,
+        lptTokensTotalForStaker2,
+        ticConsumedFromStaker2.add(staker2unclaimedTic)
+      );
+
       await merklePools
         .connect(staker1)
         .claim(
@@ -347,17 +422,18 @@ describe("MerklePools", () => {
           0,
           lptTokensTotalForStaker1,
           ticConsumedFromStaker1.add(staker1unclaimedTic),
-          []
+          proof3
         );
       await merklePools
         .connect(staker2)
         .claim(
-          0,
+          1,
           0,
           lptTokensTotalForStaker2,
           ticConsumedFromStaker2.add(staker2unclaimedTic),
-          []
+          proof4
         );
+
       expect(
         (await merklePools.getPoolTotalUnclaimedNotInLP(0)).lt(
           ethers.utils.parseUnits("2", 18)
@@ -429,12 +505,35 @@ describe("MerklePools", () => {
       // let's mint some and see if they can be claimed.
       expect(await exchange.balanceOf(accounts[0].address)).to.equal(0);
       const balanceToClaim = await exchange.balanceOf(merklePools.address);
+
+      // generate the tree
+      const tree3 = new BalanceTree([
+        {
+          account: accounts[0].address,
+          poolId: 0,
+          totalLPTokenAmount: await exchange.balanceOf(merklePools.address),
+          totalTICAmount: forfeitUnclaimed,
+        },
+      ]);
+
+      // set the root
+      await merklePools.setMerkleRoot(tree3.getHexRoot());
+
+      // generate proof
+      const proof5 = tree3.getProof(
+        0,
+        accounts[0].address,
+        0,
+        await exchange.balanceOf(merklePools.address),
+        forfeitUnclaimed
+      );
+
       await merklePools.claim(
         0,
         0,
         await exchange.balanceOf(merklePools.address),
         forfeitUnclaimed,
-        []
+        proof5
       );
       expect(await exchange.balanceOf(accounts[0].address)).to.equal(
         balanceToClaim
