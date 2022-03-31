@@ -363,7 +363,7 @@ contract MerklePools is ReentrancyGuard {
         bytes32[] calldata _merkleProof
     ) external {
         require(isClaimsEnabled, "MerklePools: CLAIMS_DISABLED");
-        
+
         // Verify the merkle proof.
         bytes32 node =
             keccak256(

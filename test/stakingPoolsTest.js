@@ -186,7 +186,7 @@ describe("StakingPools", () => {
   });
 
   describe("setRewardRates", () => {
-    it.only("works correctly if staker stakes before first configuration", async () => {
+    it("works correctly if staker stakes before first configuration", async () => {
       const staker1 = accounts[1];
       const StakingPools = await ethers.getContractFactory("StakingPools");
       const stakingPools1 = await StakingPools.deploy(
@@ -194,7 +194,7 @@ describe("StakingPools", () => {
         accounts[0].address
       );
       await stakingPools1.deployed();
-  
+
       // create pool
       await stakingPools1.createPool(ticToken.address);
       await stakingPools1.createPool(timeTokenTeam.address);
@@ -208,9 +208,9 @@ describe("StakingPools", () => {
       const next = Math.round(Date.now() / 1000) + 3600;
       await ethers.provider.send("evm_setNextBlockTimestamp", [next]);
       await ethers.provider.send("evm_mine");
-      // attempt to set weights, which will now fail
+      // attempt to set weights
       await stakingPools1.setRewardWeights([100, 100]);
+      expect(await stakingPools1.getPoolRewardWeight(0)).to.eq(100);
     });
-
   });
 });

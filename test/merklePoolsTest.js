@@ -105,7 +105,7 @@ describe("MerklePools", () => {
   });
 
   describe("generateLPTokens", () => {
-    it("Can mint LP tokens", async () => {
+    it("can mint LP tokens", async () => {
       // clean start
       expect(await usdcToken.balanceOf(exchange.address)).to.eq(0);
       expect(await ticToken.balanceOf(exchange.address)).to.eq(0);
@@ -149,6 +149,22 @@ describe("MerklePools", () => {
       expect(await exchange.balanceOf(merklePools.address)).to.not.eq(0);
 
       // add test to ensure we can add LP tokens now that initial price has been established.
+    });
+
+    it("it can handle slippage", async () => {
+
+    });
+
+    it("fails from non governance address", async () => {
+
+    });
+
+    it("fails to mint more than outstanding unclaimed TIC in pool", async () => {
+
+    });
+
+    it("fails for non existent pool", async () => {
+
     });
   });
 
@@ -598,7 +614,7 @@ describe("MerklePools", () => {
         accounts[0].address
       );
       await merklePools1.deployed();
-  
+
       // create pool
       await merklePools1.createPool(ticToken.address);
       await merklePools1.createPool(exchange.address);
@@ -614,7 +630,54 @@ describe("MerklePools", () => {
       await ethers.provider.send("evm_mine");
       // attempt to set weights, which will now fail
       await merklePools1.setRewardWeights([100, 100]);
+      expect(await merklePools1.getPoolRewardWeight(0)).to.eq(100);
+    });
+  });
+
+  describe("claim", () => {
+    it("emits TokensClaimed with correct variables", async () => {
+
     });
 
-  });
+    it("doesn't allow address to claim another address's tokens", async () => {
+
+    });
+
+    it("doesn't allow address to claim more than set", async () => {
+
+    });
+
+    it("fails with bad proof", async () => {
+
+    });
+
+    it("fails before proof is set", async () => {
+
+    });
+
+    it("fails if not all data is consistent", async () => {
+
+    });
+
+    it("fails if merkle tree is out of sync with contract", async () => {
+
+    });
+
+    it("transfers correct token amount for single claim", async () => {
+
+    });
+
+    it("transfers correct token amount for successive claims", async () => {
+
+    });
+
+    it("allows forfeited tokens to be claimed once", async () => {
+
+    });
+
+    it("allows forfeited tokens to be claimed multiple times", async () => {
+
+    });
+
+  })
 });
