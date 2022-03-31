@@ -151,7 +151,7 @@ describe("MerklePools", () => {
       // add test to ensure we can add LP tokens now that initial price has been established.
     });
 
-    it.only("it can handle slippage", async () => {
+    it("it can handle slippage", async () => {
       // clean start
       const staker1 = accounts[2];
       const staker1TIC = ethers.utils.parseUnits("400", 18);
@@ -198,7 +198,11 @@ describe("MerklePools", () => {
         expirationTimestamp
       );
 
-      expect((await merklePools.excessTICFromSlippage()).gt(ethers.utils.parseUnits("2", 18))).to.be.true;
+      expect(
+        (await merklePools.excessTICFromSlippage()).gt(
+          ethers.utils.parseUnits("2", 18)
+        )
+      ).to.be.true;
 
       // attempt to use the excess TIC from slippage
       const usdcInExchange = await usdcToken.balanceOf(exchange.address);
@@ -218,9 +222,86 @@ describe("MerklePools", () => {
       expect(await merklePools.excessTICFromSlippage()).to.eq(0);
     });
 
-    it("fails from non governance address", async () => {});
+    it("fails from non governance address", async () => {
+      // clean start
+      const staker1 = accounts[2];
+      const staker1TIC = ethers.utils.parseUnits("200", 18);
+      await ticToken.mint(staker1.address, staker1TIC);
 
-    it("fails to mint more than outstanding unclaimed TIC in pool", async () => {});
+      // stake tic
+      await ticToken.connect(staker1).approve(merklePools.address, staker1TIC);
+      await merklePools.connect(staker1).deposit(0, staker1TIC);
+
+      // add approval for usdc
+      await usdcToken.approve(
+        merklePools.address,
+        await usdcToken.balanceOf(accounts[0].address)
+      );
+
+      const usdcToAdd = ethers.utils.parseUnits("100", 18);
+      const ticToBeMinted = usdcToAdd.div(10); // TIC = $10USDC
+
+      const start = Math.round(Date.now() / 1000);
+      const futureTime = start + 60 * 60 * 60 * 24 * 365;
+      const expirationTimestamp = futureTime + 600;
+
+      await ethers.provider.send("evm_setNextBlockTimestamp", [futureTime]);
+      await ethers.provider.send("evm_mine");
+
+      await expect(
+        merklePools
+          .connect(staker1)
+          .generateLPTokens(
+            0,
+            ticToBeMinted,
+            usdcToAdd,
+            ticToBeMinted.sub(1),
+            usdcToAdd.sub(1),
+            expirationTimestamp
+          )
+      ).to.be.revertedWith("MerklePools: ONLY_GOVERNANCE");
+    });
+
+    only("fails to mint more than outstanding unclaimed TIC in pool", async () => {
+      // clean start
+      const staker1 = accounts[2];
+      const staker1TIC = ethers.utils.parseUnits("200", 18);
+      await ticToken.mint(staker1.address, staker1TIC);
+
+      // stake tic
+      await ticToken.connect(staker1).approve(merklePools.address, staker1TIC);
+      await merklePools.connect(staker1).deposit(0, staker1TIC);
+
+      // add approval for usdc
+      await usdcToken.approve(
+        merklePools.address,
+        await usdcToken.balanceOf(accounts[0].address)
+      );
+
+      const usdcToAdd = ethers.utils.parseUnits("100", 18);
+
+      const start = Math.round(Date.now() / 1000);
+      const futureTime = start + 60 * 60 * 60 * 24 * 365;
+      const expirationTimestamp = futureTime + 600;
+
+      await ethers.provider.send("evm_setNextBlockTimestamp", [futureTime]);
+      await ethers.provider.send("evm_mine");
+
+      const ticToBeMinted = (await merklePools.getPoolTotalUnclaimed(0)).add(
+        ethers.utils.parseUnits("10", 18)
+      );
+
+      await expect(
+        merklePools.generateLPTokens(
+          0,
+          ticToBeMinted,
+          usdcToAdd,
+          ticToBeMinted.sub(1),
+          usdcToAdd.sub(1),
+          expirationTimestamp
+        )
+      ).to.be.revertedWith("MerklePools: NSF_UNCLAIMED");
+    });
 
     it("fails for non existent pool", async () => {});
   });

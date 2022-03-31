@@ -89,10 +89,7 @@ contract MerklePools is ReentrancyGuard {
         address _governance,
         address _forfeitAddress
     ) {
-        require(
-            _governance != address(0),
-            "MerklePools: governance address cannot be 0x0"
-        );
+        require(_governance != address(0), "MerklePools: INVALID_ADDRESS");
 
         ticToken = _ticToken;
         governance = _governance;
@@ -109,7 +106,7 @@ contract MerklePools is ReentrancyGuard {
      * @dev A modifier which reverts when the caller is not the governance.
      */
     modifier onlyGovernance() {
-        require(msg.sender == governance, "MerklePools: only governance");
+        require(msg.sender == governance, "MerklePools: ONLY_GOVERNANCE");
         _;
     }
 
@@ -123,7 +120,7 @@ contract MerklePools is ReentrancyGuard {
     {
         require(
             _pendingGovernance != address(0),
-            "MerklePools: pending governance address cannot be 0x0"
+            "MerklePools: INVALID_ADDRESS"
         );
         pendingGovernance = _pendingGovernance;
 
@@ -131,10 +128,7 @@ contract MerklePools is ReentrancyGuard {
     }
 
     function acceptGovernance() external {
-        require(
-            msg.sender == pendingGovernance,
-            "MerklePools: only pending governance"
-        );
+        require(msg.sender == pendingGovernance, "MerklePools: ONLY_PENDING");
 
         address pendingGovernance_ = pendingGovernance;
         governance = pendingGovernance_;
@@ -174,10 +168,7 @@ contract MerklePools is ReentrancyGuard {
         onlyGovernance
         returns (uint256)
     {
-        require(
-            tokenPoolIds[_token] == 0,
-            "MerklePools: token already has a pool"
-        );
+        require(tokenPoolIds[_token] == 0, "MerklePools: ALREADY_CREATED");
 
         uint256 poolId = _pools.length();
 
@@ -210,7 +201,7 @@ contract MerklePools is ReentrancyGuard {
     {
         require(
             _rewardWeights.length == _pools.length(),
-            "MerklePools: weights length mismatch"
+            "MerklePools: LENGTH_MISMATCH"
         );
 
         _updatePools();
