@@ -52,7 +52,8 @@ contract MerklePools is ReentrancyGuard {
         address indexed user,
         uint256 indexed poolId,
         uint256 index,
-        uint256 amountClaimed
+        uint256 lpTokenAmountClaimed,
+        uint256 ticTokenAmountClaimed
     );
 
     event MerkleRootUpdated(bytes32 merkleRoot);
@@ -341,6 +342,7 @@ contract MerklePools is ReentrancyGuard {
      */
     function setMerkleRoot(bytes32 _merkleRoot) public onlyGovernance {
         require(merkleRoot != _merkleRoot, "MerklePools: DUPLICATE_ROOT");
+        isClaimsEnabled = true;
         merkleRoot = _merkleRoot;
         emit MerkleRootUpdated(merkleRoot);
     }
@@ -360,6 +362,8 @@ contract MerklePools is ReentrancyGuard {
         uint256 _totalTICAmount,
         bytes32[] calldata _merkleProof
     ) external {
+        require(isClaimsEnabled, "MerklePools: CLAIMS_DISABLED");
+        
         // Verify the merkle proof.
         bytes32 node =
             keccak256(
@@ -423,7 +427,8 @@ contract MerklePools is ReentrancyGuard {
             msg.sender,
             _poolId,
             _index,
-            lpTokenAmountToBeClaimed
+            lpTokenAmountToBeClaimed,
+            ticTokenAmountToBeClaimed
         );
     }
 

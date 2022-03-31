@@ -153,7 +153,7 @@ describe("MerklePools", () => {
   });
 
   describe("getPoolTotalUnclaimed", () => {
-    it.only("Handles 2 stakers in 1 pools correctly", async () => {
+    it("Handles 2 stakers in 1 pools correctly", async () => {
       const staker1 = accounts[2];
       const staker2 = accounts[3];
 
