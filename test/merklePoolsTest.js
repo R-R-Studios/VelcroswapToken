@@ -151,21 +151,78 @@ describe("MerklePools", () => {
       // add test to ensure we can add LP tokens now that initial price has been established.
     });
 
-    it("it can handle slippage", async () => {
+    it.only("it can handle slippage", async () => {
+      // clean start
+      const staker1 = accounts[2];
+      const staker1TIC = ethers.utils.parseUnits("400", 18);
+      await ticToken.mint(accounts[0].address, staker1TIC);
+      await ticToken.mint(staker1.address, staker1TIC);
 
+      // stake tic
+      await ticToken.connect(staker1).approve(merklePools.address, staker1TIC);
+      await merklePools.connect(staker1).deposit(0, staker1TIC);
+
+      // add approval for usdc
+      await usdcToken.approve(
+        merklePools.address,
+        await usdcToken.balanceOf(accounts[0].address)
+      );
+
+      const usdcToAdd = ethers.utils.parseUnits("100", 18);
+      const ticToBeMinted = usdcToAdd.div(10); // TIC = $10USDC
+
+      const start = Math.round(Date.now() / 1000);
+      const futureTime = start + 60 * 60 * 60 * 24 * 365;
+      const expirationTimestamp = futureTime + 600;
+
+      await ethers.provider.send("evm_setNextBlockTimestamp", [futureTime]);
+      await ethers.provider.send("evm_mine");
+
+      await ticToken.approve(exchange.address, staker1TIC);
+      await usdcToken.approve(exchange.address, staker1TIC);
+      await exchange.addLiquidity(
+        ticToBeMinted.sub(ethers.utils.parseUnits("3", 18)),
+        usdcToAdd.sub(ethers.utils.parseUnits("10", 18)),
+        0,
+        0,
+        accounts[0].address,
+        expirationTimestamp
+      );
+
+      await merklePools.generateLPTokens(
+        0,
+        ticToBeMinted,
+        usdcToAdd,
+        ticToBeMinted.sub(ethers.utils.parseUnits("5", 18)),
+        usdcToAdd.sub(ethers.utils.parseUnits("50", 18)),
+        expirationTimestamp
+      );
+
+      expect((await merklePools.excessTICFromSlippage()).gt(ethers.utils.parseUnits("2", 18))).to.be.true;
+
+      // attempt to use the excess TIC from slippage
+      const usdcInExchange = await usdcToken.balanceOf(exchange.address);
+      const ticInExchange = await ticToken.balanceOf(exchange.address);
+
+      const ticToAdd = ethers.utils.parseUnits("10", 18);
+      const usdcEquivalent = ticToAdd.mul(usdcInExchange).div(ticInExchange);
+
+      await merklePools.generateLPTokens(
+        0,
+        ticToAdd,
+        usdcEquivalent,
+        ticToAdd,
+        usdcEquivalent,
+        expirationTimestamp
+      );
+      expect(await merklePools.excessTICFromSlippage()).to.eq(0);
     });
 
-    it("fails from non governance address", async () => {
+    it("fails from non governance address", async () => {});
 
-    });
+    it("fails to mint more than outstanding unclaimed TIC in pool", async () => {});
 
-    it("fails to mint more than outstanding unclaimed TIC in pool", async () => {
-
-    });
-
-    it("fails for non existent pool", async () => {
-
-    });
+    it("fails for non existent pool", async () => {});
   });
 
   describe("getPoolTotalUnclaimed", () => {
@@ -635,49 +692,26 @@ describe("MerklePools", () => {
   });
 
   describe("claim", () => {
-    it("emits TokensClaimed with correct variables", async () => {
+    it("emits TokensClaimed with correct variables", async () => {});
 
-    });
+    it("doesn't allow address to claim another address's tokens", async () => {});
 
-    it("doesn't allow address to claim another address's tokens", async () => {
+    it("doesn't allow address to claim more than set", async () => {});
 
-    });
+    it("fails with bad proof", async () => {});
 
-    it("doesn't allow address to claim more than set", async () => {
+    it("fails before proof is set", async () => {});
 
-    });
+    it("fails if not all data is consistent", async () => {});
 
-    it("fails with bad proof", async () => {
+    it("fails if merkle tree is out of sync with contract", async () => {});
 
-    });
+    it("transfers correct token amount for single claim", async () => {});
 
-    it("fails before proof is set", async () => {
+    it("transfers correct token amount for successive claims", async () => {});
 
-    });
+    it("allows forfeited tokens to be claimed once", async () => {});
 
-    it("fails if not all data is consistent", async () => {
-
-    });
-
-    it("fails if merkle tree is out of sync with contract", async () => {
-
-    });
-
-    it("transfers correct token amount for single claim", async () => {
-
-    });
-
-    it("transfers correct token amount for successive claims", async () => {
-
-    });
-
-    it("allows forfeited tokens to be claimed once", async () => {
-
-    });
-
-    it("allows forfeited tokens to be claimed multiple times", async () => {
-
-    });
-
-  })
+    it("allows forfeited tokens to be claimed multiple times", async () => {});
+  });
 });

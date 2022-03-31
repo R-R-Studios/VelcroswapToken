@@ -63,7 +63,7 @@ contract MerklePools is ReentrancyGuard {
     IERC20 public quoteToken; // other half of the LP token (not the reward token)
     IERC20 public elasticLPToken; // elastic LP token we create to emit for claimed rewards
 
-    uint256 excessTICFromSlippage; // extra TIC that can be used before next mint
+    uint256 public excessTICFromSlippage; // extra TIC that can be used before next mint
 
     address public governance;
     address public pendingGovernance;
