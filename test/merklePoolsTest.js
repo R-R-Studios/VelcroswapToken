@@ -585,4 +585,36 @@ describe("MerklePools", () => {
         .withArgs(tree.getHexRoot());
     });
   });
+
+  describe("setRewardRates", () => {
+    it("works correctly if staker stakes before first configuration", async () => {
+      const staker1 = accounts[1];
+      const MerklePools = await ethers.getContractFactory("MerklePools");
+      const merklePools1 = await MerklePools.deploy(
+        ticToken.address,
+        usdcToken.address,
+        exchange.address,
+        accounts[0].address,
+        accounts[0].address
+      );
+      await merklePools1.deployed();
+  
+      // create pool
+      await merklePools1.createPool(ticToken.address);
+      await merklePools1.createPool(exchange.address);
+
+      // stake prior to any weights being set.
+      const amount = ethers.utils.parseUnits("200", 18);
+      await ticToken.mint(staker1.address, amount);
+      await ticToken.connect(staker1).approve(merklePools1.address, amount);
+      await merklePools1.connect(staker1).deposit(0, amount);
+
+      const next = Math.round(Date.now() / 1000) + 3600;
+      await ethers.provider.send("evm_setNextBlockTimestamp", [next]);
+      await ethers.provider.send("evm_mine");
+      // attempt to set weights, which will now fail
+      await merklePools1.setRewardWeights([100, 100]);
+    });
+
+  });
 });

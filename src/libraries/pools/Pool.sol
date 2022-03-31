@@ -50,6 +50,9 @@ library Pool {
         view
         returns (uint256)
     {
+        if(_ctx.totalRewardWeight == 0) {
+          return 0;
+        }
         return (_ctx.rewardRate * _data.rewardWeight) / _ctx.totalRewardWeight;
     }
 

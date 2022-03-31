@@ -184,4 +184,33 @@ describe("StakingPools", () => {
       expect(await ticToken.balanceOf(staker.address)).to.equal(expectedTokens);
     });
   });
+
+  describe("setRewardRates", () => {
+    it.only("works correctly if staker stakes before first configuration", async () => {
+      const staker1 = accounts[1];
+      const StakingPools = await ethers.getContractFactory("StakingPools");
+      const stakingPools1 = await StakingPools.deploy(
+        ticToken.address,
+        accounts[0].address
+      );
+      await stakingPools1.deployed();
+  
+      // create pool
+      await stakingPools1.createPool(ticToken.address);
+      await stakingPools1.createPool(timeTokenTeam.address);
+
+      // stake prior to any weights being set.
+      const amount = ethers.utils.parseUnits("200", 18);
+      await ticToken.mint(staker1.address, amount);
+      await ticToken.connect(staker1).approve(stakingPools1.address, amount);
+      await stakingPools1.connect(staker1).deposit(0, amount);
+
+      const next = Math.round(Date.now() / 1000) + 3600;
+      await ethers.provider.send("evm_setNextBlockTimestamp", [next]);
+      await ethers.provider.send("evm_mine");
+      // attempt to set weights, which will now fail
+      await stakingPools1.setRewardWeights([100, 100]);
+    });
+
+  });
 });
