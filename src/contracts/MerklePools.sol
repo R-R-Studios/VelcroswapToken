@@ -14,7 +14,6 @@ import "../libraries/merklePools/MerkleStake.sol";
 
 import "@elasticswap/elasticswap/src/contracts/Exchange.sol";
 
-
 /// @title StakingProfitPools
 /// @notice A contract which allows users to stake to farm tokens that are "realized" once
 /// profits enter the system and can be claimed via a merkle proof.
@@ -51,8 +50,8 @@ contract MerklePools is ReentrancyGuard {
 
     event TokensClaimed(
         address indexed user,
-        uint256 indexed poolId,
         uint256 index,
+        uint256 indexed poolId,
         uint256 lpTokenAmountClaimed,
         uint256 ticTokenAmountClaimed
     );
@@ -417,8 +416,8 @@ contract MerklePools is ReentrancyGuard {
         elasticLPToken.safeTransfer(msg.sender, lpTokenAmountToBeClaimed);
         emit TokensClaimed(
             msg.sender,
-            _poolId,
             _index,
+            _poolId,
             lpTokenAmountToBeClaimed,
             ticTokenAmountToBeClaimed
         );
