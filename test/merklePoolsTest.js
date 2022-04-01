@@ -262,7 +262,7 @@ describe("MerklePools", () => {
       ).to.be.revertedWith("MerklePools: ONLY_GOVERNANCE");
     });
 
-    only("fails to mint more than outstanding unclaimed TIC in pool", async () => {
+    it("fails to mint more than outstanding unclaimed TIC in pool", async () => {
       // clean start
       const staker1 = accounts[2];
       const staker1TIC = ethers.utils.parseUnits("200", 18);
@@ -303,11 +303,47 @@ describe("MerklePools", () => {
       ).to.be.revertedWith("MerklePools: NSF_UNCLAIMED");
     });
 
-    it("fails for non existent pool", async () => {});
+    it("fails for non existent pool", async () => {
+      // clean start
+      const staker1 = accounts[2];
+      const staker1TIC = ethers.utils.parseUnits("200", 18);
+      await ticToken.mint(staker1.address, staker1TIC);
+
+      // stake tic
+      await ticToken.connect(staker1).approve(merklePools.address, staker1TIC);
+      await merklePools.connect(staker1).deposit(0, staker1TIC);
+
+      // add approval for usdc
+      await usdcToken.approve(
+        merklePools.address,
+        await usdcToken.balanceOf(accounts[0].address)
+      );
+
+      const usdcToAdd = ethers.utils.parseUnits("100", 18);
+      const ticToBeMinted = usdcToAdd.div(10); // TIC = $10USDC
+
+      const start = Math.round(Date.now() / 1000);
+      const futureTime = start + 60 * 60 * 60 * 24 * 365;
+      const expirationTimestamp = futureTime + 600;
+
+      await ethers.provider.send("evm_setNextBlockTimestamp", [futureTime]);
+      await ethers.provider.send("evm_mine");
+
+      await expect(
+        merklePools.generateLPTokens(
+          2,
+          ticToBeMinted,
+          usdcToAdd,
+          ticToBeMinted.sub(1),
+          usdcToAdd.sub(1),
+          expirationTimestamp
+        )
+      ).to.be.revertedWith("MerklePool: INVALID_INDEX");
+    });
   });
 
   describe("getPoolTotalUnclaimed", () => {
-    it("Handles 2 stakers in 1 pools correctly", async () => {
+    it.only("Handles 2 stakers in 1 pools correctly", async () => {
       const staker1 = accounts[2];
       const staker2 = accounts[3];
 
@@ -377,8 +413,6 @@ describe("MerklePools", () => {
       );
       expect(diffAfterYear2.lt(ethers.utils.parseUnits("10", 18))).to.be.true; // diff of less than 10 tokens in a year.
 
-      // TODO: enable merkle verification!
-
       // generate LP tokens so we can claim some!
       const ticToMint = unclaimedAtEndOfYear2.div(20); // 5% of rewards are going to be issued
       const ticPrice = 10;
@@ -405,12 +439,14 @@ describe("MerklePools", () => {
         staker1.address,
         0
       );
+      const unclaimedTotalsFromStakers = staker1unclaimedTic.add(staker2unclaimedTic);
+
       const lpTokenForStaker2 = lpTokenBalance
         .mul(staker2unclaimedTic)
-        .div(unclaimedAtEndOfYear2);
+        .div(unclaimedTotalsFromStakers);
       const lpTokenForStaker1 = lpTokenBalance
         .mul(staker1unclaimedTic)
-        .div(unclaimedAtEndOfYear2);
+        .div(unclaimedTotalsFromStakers);
 
       const ticConsumedFromStaker2 = lpTokenForStaker2.mul(ticPerLP);
       const ticConsumedFromStaker1 = lpTokenForStaker1.mul(ticPerLP);
@@ -730,7 +766,7 @@ describe("MerklePools", () => {
     it("reverts when set by non owner", async () => {
       await expect(
         merklePools.connect(accounts[1]).setMerkleRoot(tree.getHexRoot())
-      ).to.be.revertedWith("MerklePools: only governance");
+      ).to.be.revertedWith("MerklePools: ONLY_GOVERNANCE");
     });
 
     it("emits MerkleRootUpdated", async () => {

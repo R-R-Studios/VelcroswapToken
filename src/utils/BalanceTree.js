@@ -4,8 +4,15 @@ const { MerkleTree } = require("./MerkleTree");
 class BalanceTree {
   constructor(balances) {
     this._tree = new MerkleTree(
-      balances.map(({ account, poolId, totalLPTokenAmount, totalTICAmount}, index) =>
-        BalanceTree.toNode(index, account, poolId, totalLPTokenAmount, totalTICAmount)
+      balances.map(
+        ({ account, poolId, totalLPTokenAmount, totalTICAmount }, index) =>
+          BalanceTree.toNode(
+            index,
+            account,
+            poolId,
+            totalLPTokenAmount,
+            totalTICAmount
+          )
       )
     );
   }

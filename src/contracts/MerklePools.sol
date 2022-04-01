@@ -14,6 +14,7 @@ import "../libraries/merklePools/MerkleStake.sol";
 
 import "@elasticswap/elasticswap/src/contracts/Exchange.sol";
 
+
 /// @title StakingProfitPools
 /// @notice A contract which allows users to stake to farm tokens that are "realized" once
 /// profits enter the system and can be claimed via a merkle proof.

@@ -106,6 +106,9 @@ library MerklePool {
         view
         returns (uint256)
     {
+        if (_data.totalDeposited == 0) {
+            return _data.totalUnclaimedTIC;
+        }
         return
             _data.totalUnclaimedTIC + _data.getUpdatedAmountToDistribute(_ctx);
     }
@@ -127,6 +130,7 @@ library MerklePool {
         view
         returns (Data storage)
     {
+        require(_index < _self.elements.length, "MerklePool: INVALID_INDEX");
         return _self.elements[_index];
     }
 
