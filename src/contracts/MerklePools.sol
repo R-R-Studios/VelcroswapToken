@@ -92,7 +92,7 @@ contract MerklePools is ReentrancyGuardUpgradeable {
         address _forfeitAddress
     ) external initializer {
         require(_governance != address(0), "MerklePools: INVALID_ADDRESS");
-        __ReentrancyGuard_init();
+        ReentrancyGuardUpgradeable.__ReentrancyGuard_init();
         ticToken = _ticToken;
         governance = _governance;
         elasticLPToken = _elasticLPToken;
