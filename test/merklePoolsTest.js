@@ -1,5 +1,5 @@
 const { expect } = require("chai");
-const { ethers, deployments } = require("hardhat");
+const { ethers, deployments, upgrades } = require("hardhat");
 const exchangeArtifact = require("@elasticswap/elasticswap/artifacts/src/contracts/Exchange.sol/Exchange.json");
 
 const { BalanceTree } = require("../src/utils/BalanceTree");
@@ -68,15 +68,16 @@ describe("MerklePools", () => {
 
     // Now we can finally deploy our merkle pool since we have all needed information!
     const MerklePools = await ethers.getContractFactory("MerklePools");
-    merklePools = await MerklePools.deploy();
-    await merklePools.deployed();
-    merklePools.initialize(      
-      ticToken.address,
-      usdcToken.address,
-      exchange.address,
-      accounts[0].address,
-      accounts[0].address
+    merklePools = await upgrades.deployProxy(MerklePools,
+      [
+        ticToken.address,
+        usdcToken.address,
+        exchange.address,
+        accounts[0].address,
+        accounts[0].address
+      ]
     );
+    await merklePools.deployed();
 
     // create two pools
     await merklePools.createPool(ticToken.address);
@@ -782,15 +783,16 @@ describe("MerklePools", () => {
     it("works correctly if staker stakes before first configuration", async () => {
       const staker1 = accounts[1];
       const MerklePools = await ethers.getContractFactory("MerklePools");
-      const merklePools1 = await MerklePools.deploy();
-      await merklePools1.deployed();
-      merklePools1.initialize(      
-        ticToken.address,
-        usdcToken.address,
-        exchange.address,
-        accounts[0].address,
-        accounts[0].address
+      const merklePools1 = await upgrades.deployProxy(MerklePools,
+        [
+          ticToken.address,
+          usdcToken.address,
+          exchange.address,
+          accounts[0].address,
+          accounts[0].address
+        ]
       );
+      await merklePools1.deployed();
 
       // create pool
       await merklePools1.createPool(ticToken.address);

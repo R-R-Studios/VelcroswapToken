@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 import "../FixedPointMath.sol";
 
 /// @title Pool
@@ -19,7 +17,7 @@ library MerklePool {
     }
 
     struct Data {
-        IERC20 token;
+        address token;
         uint256 totalDeposited;
         uint256 totalUnclaimedTIC;
         uint256 totalUnclaimedTICInLP;
