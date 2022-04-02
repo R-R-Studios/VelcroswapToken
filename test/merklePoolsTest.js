@@ -68,14 +68,15 @@ describe("MerklePools", () => {
 
     // Now we can finally deploy our merkle pool since we have all needed information!
     const MerklePools = await ethers.getContractFactory("MerklePools");
-    merklePools = await MerklePools.deploy(
+    merklePools = await MerklePools.deploy();
+    await merklePools.deployed();
+    merklePools.initialize(      
       ticToken.address,
       usdcToken.address,
       exchange.address,
       accounts[0].address,
       accounts[0].address
     );
-    await merklePools.deployed();
 
     // create two pools
     await merklePools.createPool(ticToken.address);
@@ -781,14 +782,15 @@ describe("MerklePools", () => {
     it("works correctly if staker stakes before first configuration", async () => {
       const staker1 = accounts[1];
       const MerklePools = await ethers.getContractFactory("MerklePools");
-      const merklePools1 = await MerklePools.deploy(
+      const merklePools1 = await MerklePools.deploy();
+      await merklePools1.deployed();
+      merklePools1.initialize(      
         ticToken.address,
         usdcToken.address,
         exchange.address,
         accounts[0].address,
         accounts[0].address
       );
-      await merklePools1.deployed();
 
       // create pool
       await merklePools1.createPool(ticToken.address);
@@ -1208,7 +1210,7 @@ describe("MerklePools", () => {
       );
     });
 
-    it.only("works with address having claims in 2 pools", async () => {
+    it("works with address having claims in 2 pools", async () => {
       await merklePools.createPool(usdcToken.address);
       await merklePools.setRewardWeights([100, 10, 100]);
 
@@ -1301,7 +1303,21 @@ describe("MerklePools", () => {
         .connect(staker1)
         .claim(1, 2, lpTokenBalance.div(2), unclaimedAtEndOfYear1, proof2);
 
-      expect(await exchange.balanceOf(staker1.address)).to.equal(lpTokenBalance);
+      expect(await exchange.balanceOf(staker1.address)).to.equal(
+        lpTokenBalance
+      );
     });
+  });
+
+  describe("initialize", () => {
+    it("cannot be called twice", async () => {
+      await expect(merklePools.initialize(      
+        ticToken.address,
+        usdcToken.address,
+        exchange.address, 
+        accounts[0].address,
+        accounts[0].address
+      )).to.be.revertedWith("Initializable: contract is already initialized")
+    });    
   });
 });

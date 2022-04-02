@@ -18,7 +18,7 @@ import "@elasticswap/elasticswap/src/contracts/Exchange.sol";
 /// @title StakingProfitPools
 /// @notice A contract which allows users to stake to farm tokens that are "realized" once
 /// profits enter the system and can be claimed via a merkle proof.
-contract MerklePools is ReentrancyGuard {
+contract MerklePools is ReentrancyGuard, Initializable {
     using FixedPointMath for FixedPointMath.FixedDecimal;
     using MerklePool for MerklePool.Data;
     using MerklePool for MerklePool.List;
@@ -83,13 +83,15 @@ contract MerklePools is ReentrancyGuard {
     // mapping of all of the user stakes mapped first by pool and then by address.
     mapping(address => mapping(uint256 => MerkleStake.Data)) public stakes;
 
-    constructor(
+    constructor() {}
+
+    function initialize(
         IMintableERC20 _ticToken,
         IERC20 _quoteToken,
         IERC20 _elasticLPToken,
         address _governance,
         address _forfeitAddress
-    ) {
+    ) external initializer {
         require(_governance != address(0), "MerklePools: INVALID_ADDRESS");
 
         ticToken = _ticToken;
