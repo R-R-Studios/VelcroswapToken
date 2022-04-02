@@ -1158,8 +1158,6 @@ describe("MerklePools", () => {
       await merklePools
         .connect(staker1)
         .claim(0, 0, lpTokenBalance.div(2), unclaimedAtEndOfYear1.div(2), proof1);
-
-      
         expect(await exchange.balanceOf(staker1.address)).to.equal(lpTokenBalance.div(2));
 
         const tree2 = new BalanceTree([
@@ -1191,9 +1189,5 @@ describe("MerklePools", () => {
           .claim(0, 0, lpTokenBalance, unclaimedAtEndOfYear1, proof2);
         expect(await exchange.balanceOf(staker1.address)).to.equal(lpTokenBalance);
     });
-
-    it("allows forfeited tokens to be claimed once", async () => {});
-
-    it("allows forfeited tokens to be claimed multiple times", async () => {});
   });
 });
