@@ -33,6 +33,7 @@ class BalanceTree {
       totalLPTokenAmount,
       totalTICAmount
     );
+    // eslint-disable-next-line no-restricted-syntax
     for (const item of proof) {
       pair = MerkleTree.combinedHash(pair, item);
     }
