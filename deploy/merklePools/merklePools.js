@@ -3,8 +3,8 @@ module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
   const namedAccounts = await getNamedAccounts();
   const { admin, governance } = namedAccounts;
 
-  const poolLib = await deployments.get("Pool");
-  const stakeLib = await deployments.get("Stake");
+  const poolLib = await deployments.get("MerklePool");
+  const stakeLib = await deployments.get("MerkleStake");
   const fixedPointMathLib = await deployments.get("FixedPointMath");
   const ticToken = await deployments.get("TicToken");
 
@@ -48,4 +48,4 @@ module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
   }
 };
 module.exports.tags = ["MerklePools"];
-module.exports.dependencies = ["Pool", "Stake", "FixedPointMath", "TicToken"];
+module.exports.dependencies = ["MerklePool", "MerkleStake", "FixedPointMath", "TicToken"];
