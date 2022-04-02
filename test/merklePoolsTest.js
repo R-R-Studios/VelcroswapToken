@@ -79,6 +79,11 @@ describe("MerklePools", () => {
     );
     await merklePools.deployed();
 
+    // upgrade our deployment to ensure all functionality still holds
+    const MerklePoolsV2 = await ethers.getContractFactory("MerklePoolsV2");
+    merklePools = await upgrades.upgradeProxy(merklePools.address, MerklePoolsV2);
+    await merklePools.deployed();
+
     // create two pools
     await merklePools.createPool(ticToken.address);
     await merklePools.createPool(exchange.address);
@@ -97,12 +102,13 @@ describe("MerklePools", () => {
     await ticToken.grantRole(minterRole, accounts[0].address);
   });
 
-  describe("constructor", () => {
+  describe("Initialize", () => {
     it("Properly sets initial variables", async () => {
       expect(await merklePools.ticToken()).to.eq(ticToken.address);
       expect(await merklePools.quoteToken()).to.eq(usdcToken.address);
       expect(await merklePools.elasticLPToken()).to.eq(exchange.address);
       expect(await merklePools.governance()).to.eq(accounts[0].address);
+      expect(await merklePools.versionNumber()).to.eq(2);
     });
   });
 
