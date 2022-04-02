@@ -1137,10 +1137,17 @@ describe("MerklePools", () => {
           totalLPTokenAmount: lpTokenBalance.div(2),
           totalTICAmount: unclaimedAtEndOfYear1.div(2),
         },
+        {
+          account: exchange.address,
+          poolId: 5,
+          totalLPTokenAmount: 0,
+          totalTICAmount: 0,
+        }
       ]);
 
       // set the root
       await merklePools.setMerkleRoot(tree1.getHexRoot());
+
       const proof1 = tree1.getProof(
         0,
         staker1.address,
@@ -1148,7 +1155,6 @@ describe("MerklePools", () => {
         lpTokenBalance.div(2),
         unclaimedAtEndOfYear1.div(2)
       );
-
       await merklePools
         .connect(staker1)
         .claim(0, 0, lpTokenBalance.div(2), unclaimedAtEndOfYear1.div(2), proof1);
@@ -1163,6 +1169,12 @@ describe("MerklePools", () => {
             totalLPTokenAmount: lpTokenBalance,
             totalTICAmount: unclaimedAtEndOfYear1,
           },
+          {
+            account: exchange.address,
+            poolId: 5,
+            totalLPTokenAmount: 0,
+            totalTICAmount: 0,
+          }
         ]);
   
         // set the root
@@ -1174,10 +1186,9 @@ describe("MerklePools", () => {
           lpTokenBalance,
           unclaimedAtEndOfYear1
         );
-        
         await merklePools
           .connect(staker1)
-          .claim(0, 0, lpTokenBalance, unclaimedAtEndOfYear1, proof1);
+          .claim(0, 0, lpTokenBalance, unclaimedAtEndOfYear1, proof2);
         expect(await exchange.balanceOf(staker1.address)).to.equal(lpTokenBalance);
     });
 
