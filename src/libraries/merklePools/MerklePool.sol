@@ -85,6 +85,11 @@ library MerklePool {
         return _data.accumulatedRewardWeight.add(rewardWeight);
     }
 
+    /**
+     * @dev get's the total amount to distribute in this pool based on the last updated timestamp.
+     * @param _data pool's data
+     * @param _ctx the pool context
+     */
     function getUpdatedAmountToDistribute(
         Data storage _data,
         Context storage _ctx
@@ -99,6 +104,11 @@ library MerklePool {
         return rewardRate * elapsedTime;
     }
 
+    /**
+     * @dev get's the total amount unclaimed in this pool based on the last updated timestamp.
+     * @param _data pool's data
+     * @param _ctx the pool context
+    */
     function getUpdatedTotalUnclaimed(Data storage _data, Context storage _ctx)
         internal
         view

@@ -7,6 +7,13 @@ const { BalanceTree } = require("../src/utils/BalanceTree");
 const ZERO_BYTES32 =
   "0x0000000000000000000000000000000000000000000000000000000000000000";
 
+const TREE_FILL = {
+  account: 0x0,
+  poolId: 0,
+  totalLPTokenAmount: 0,
+  totalTICAmount: 0,
+}
+
 describe("MerklePools", () => {
   let accounts;
   let exchangeFactory;
@@ -713,6 +720,7 @@ describe("MerklePools", () => {
           totalLPTokenAmount: await exchange.balanceOf(merklePools.address),
           totalTICAmount: forfeitUnclaimed,
         },
+        TREE_FILL
       ]);
 
       // set the root
@@ -863,6 +871,7 @@ describe("MerklePools", () => {
           totalLPTokenAmount: lpTokenBalance,
           totalTICAmount: unclaimedAtEndOfYear1,
         },
+        TREE_FILL
       ]);
 
       // set the root
@@ -1015,6 +1024,16 @@ describe("MerklePools", () => {
           .claim(1, 1, lpTokenForStaker2, ticConsumedFromStaker2, proof1)
       ).to.be.revertedWith("MerklePools: INVALID_PROOF");
 
+      await merklePools.setMerkleRoot(ZERO_BYTES32);
+
+      await expect(
+        merklePools
+          .connect(staker2)
+          .claim(1, 0, lpTokenForStaker2, ticConsumedFromStaker2, proof1)
+      ).to.be.revertedWith("MerklePools: INVALID_PROOF");
+
+      await merklePools.setMerkleRoot(tree1.getHexRoot());
+
       await merklePools
         .connect(staker2)
         .claim(1, 0, lpTokenForStaker2, ticConsumedFromStaker2, proof1);
@@ -1063,6 +1082,7 @@ describe("MerklePools", () => {
           totalLPTokenAmount: lpTokenBalance,
           totalTICAmount: unclaimedAtEndOfYear1,
         },
+        TREE_FILL
       ]);
 
       const proof1 = tree1.getProof(
@@ -1086,6 +1106,7 @@ describe("MerklePools", () => {
           totalLPTokenAmount: lpTokenBalance,
           totalTICAmount: unclaimedAtEndOfYear1,
         },
+        TREE_FILL
       ]);
 
       await merklePools.setMerkleRoot(tree2.getHexRoot());

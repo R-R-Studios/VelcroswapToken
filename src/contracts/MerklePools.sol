@@ -14,7 +14,7 @@ import "../libraries/merklePools/MerkleStake.sol";
 
 import "@elasticswap/elasticswap/src/contracts/Exchange.sol";
 
-/// @title StakingProfitPools
+/// @title MerklePools
 /// @notice A contract which allows users to stake to farm tokens that are "realized" once
 /// profits enter the system and can be claimed via a merkle proof.
 contract MerklePools is ReentrancyGuardUpgradeable {
@@ -70,14 +70,14 @@ contract MerklePools is ReentrancyGuardUpgradeable {
     address public forfeitAddress; // receives all unclaimed TIC when someone exits
 
     bytes32 public merkleRoot;
-    bool public isClaimsEnabled;
+    bool public isClaimsEnabled;  // disabled flag until first merkle proof is set. 
 
     // Tokens are mapped to their pool identifier plus one. Tokens that do not have an associated pool
     // will return an identifier of zero.
     mapping(address => uint256) public tokenPoolIds;
 
     MerklePool.Context public poolContext; // The context shared between the pools.
-    MerklePool.List private _pools; // A list of all of the pools.
+    MerklePool.List private pools; // A list of all of the pools.
 
     // mapping of all of the user stakes mapped first by pool and then by address.
     mapping(address => mapping(uint256 => MerkleStake.Data)) public stakes;
@@ -150,6 +150,11 @@ contract MerklePools is ReentrancyGuardUpgradeable {
         emit RewardRateUpdated(_rewardRate);
     }
 
+    /**
+     * @dev Sets the address rewards are forfeited to when a staker exits prior to realizing
+     * their rewards.
+     * @param _forfeitAddress address to set. 
+     */
     function setForfeitAddress(address _forfeitAddress)
         external
         onlyGovernance
@@ -172,9 +177,9 @@ contract MerklePools is ReentrancyGuardUpgradeable {
     {
         require(tokenPoolIds[_token] == 0, "MerklePools: ALREADY_CREATED");
 
-        uint256 poolId = _pools.length();
+        uint256 poolId = pools.length();
 
-        _pools.push(
+        pools.push(
             MerklePool.Data({
                 token: _token,
                 totalDeposited: 0,
@@ -202,16 +207,16 @@ contract MerklePools is ReentrancyGuardUpgradeable {
         onlyGovernance
     {
         require(
-            _rewardWeights.length == _pools.length(),
+            _rewardWeights.length == pools.length(),
             "MerklePools: LENGTH_MISMATCH"
         );
 
         _updatePools();
 
         uint256 totalRewardWeight_ = poolContext.totalRewardWeight;
-        uint256 poolsLength = _pools.length();
+        uint256 poolsLength = pools.length();
         for (uint256 _poolId = 0; _poolId < poolsLength; _poolId++) {
-            MerklePool.Data storage _pool = _pools.get(_poolId);
+            MerklePool.Data storage _pool = pools.get(_poolId);
 
             uint256 _currentRewardWeight = _pool.rewardWeight;
             if (_currentRewardWeight == _rewardWeights[_poolId]) {
@@ -239,7 +244,7 @@ contract MerklePools is ReentrancyGuardUpgradeable {
         nonReentrant
     {
         require(msg.sender != forfeitAddress, "MerklePools: UNUSABLE_ADDRESS");
-        MerklePool.Data storage pool = _pools.get(_poolId);
+        MerklePool.Data storage pool = pools.get(_poolId);
         pool.update(poolContext);
 
         MerkleStake.Data storage stake = stakes[msg.sender][_poolId];
@@ -253,11 +258,11 @@ contract MerklePools is ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @dev Claims all rewards from a pool and then withdraws all staked tokens.
+     * @dev exits and returns all staked tokens from a pool and forfeit's any outstanding rewards
      * @param _poolId the pool to exit from.
      */
     function exit(uint256 _poolId) external nonReentrant {
-        MerklePool.Data storage pool = _pools.get(_poolId);
+        MerklePool.Data storage pool = pools.get(_poolId);
         pool.update(poolContext);
 
         MerkleStake.Data storage stake = stakes[msg.sender][_poolId];
@@ -296,7 +301,7 @@ contract MerklePools is ReentrancyGuardUpgradeable {
         uint256 _quoteTokenQtyMin,
         uint256 _expirationTimestamp
     ) external onlyGovernance {
-        MerklePool.Data storage _pool = _pools.get(_poolId);
+        MerklePool.Data storage _pool = pools.get(_poolId);
         _pool.update(poolContext); // update pool first!
         uint256 maxMintAmount =
             _pool.totalUnclaimedTIC - _pool.totalUnclaimedTICInLP;
@@ -384,7 +389,7 @@ contract MerklePools is ReentrancyGuardUpgradeable {
             "MerklePools: INVALID_CLAIM_AMOUNT"
         );
 
-        MerklePool.Data storage pool = _pools.get(_poolId);
+        MerklePool.Data storage pool = pools.get(_poolId);
         pool.update(poolContext);
         stake.update(pool, poolContext);
 
@@ -446,7 +451,7 @@ contract MerklePools is ReentrancyGuardUpgradeable {
      * @return the pool count.
      */
     function poolCount() external view returns (uint256) {
-        return _pools.length();
+        return pools.length();
     }
 
     /**
@@ -455,7 +460,7 @@ contract MerklePools is ReentrancyGuardUpgradeable {
      * @return the token.
      */
     function getPoolToken(uint256 _poolId) external view returns (address) {
-        MerklePool.Data storage pool = _pools.get(_poolId);
+        MerklePool.Data storage pool = pools.get(_poolId);
         return pool.token;
     }
 
@@ -469,7 +474,7 @@ contract MerklePools is ReentrancyGuardUpgradeable {
         view
         returns (MerklePool.Data memory)
     {
-        return _pools.get(_poolId);
+        return pools.get(_poolId);
     }
 
     /**
@@ -482,7 +487,7 @@ contract MerklePools is ReentrancyGuardUpgradeable {
         view
         returns (uint256)
     {
-        MerklePool.Data storage pool = _pools.get(_poolId);
+        MerklePool.Data storage pool = pools.get(_poolId);
         return pool.totalDeposited;
     }
 
@@ -496,16 +501,22 @@ contract MerklePools is ReentrancyGuardUpgradeable {
         view
         returns (uint256)
     {
-        MerklePool.Data storage pool = _pools.get(_poolId);
+        MerklePool.Data storage pool = pools.get(_poolId);
         return pool.getUpdatedTotalUnclaimed(poolContext);
     }
 
+    /**
+     * @dev Gets the total amount of tokens unclaimed from a pool that are not yet "realized" in 
+     * the form of LP tokens
+     * @param _poolId the identifier of the pool.
+     * @return the total amount of unclaimed and un-minted tokens from a pool that are not in LP tokens
+     */
     function getPoolTotalUnclaimedNotInLP(uint256 _poolId)
         external
         view
         returns (uint256)
     {
-        MerklePool.Data storage pool = _pools.get(_poolId);
+        MerklePool.Data storage pool = pools.get(_poolId);
         return
             pool.getUpdatedTotalUnclaimed(poolContext) -
             pool.totalUnclaimedTICInLP;
@@ -522,7 +533,7 @@ contract MerklePools is ReentrancyGuardUpgradeable {
         view
         returns (uint256)
     {
-        MerklePool.Data storage pool = _pools.get(_poolId);
+        MerklePool.Data storage pool = pools.get(_poolId);
         return pool.rewardWeight;
     }
 
@@ -536,7 +547,7 @@ contract MerklePools is ReentrancyGuardUpgradeable {
         view
         returns (uint256)
     {
-        MerklePool.Data storage pool = _pools.get(_poolId);
+        MerklePool.Data storage pool = pools.get(_poolId);
         return pool.getRewardRate(poolContext);
     }
 
@@ -567,15 +578,15 @@ contract MerklePools is ReentrancyGuardUpgradeable {
         returns (uint256)
     {
         MerkleStake.Data storage stake = stakes[_account][_poolId];
-        return stake.getUpdatedTotalUnclaimed(_pools.get(_poolId), poolContext);
+        return stake.getUpdatedTotalUnclaimed(pools.get(_poolId), poolContext);
     }
 
     /**
      * @dev Updates all of the pools.
      */
     function _updatePools() internal {
-        for (uint256 poolId = 0; poolId < _pools.length(); poolId++) {
-            MerklePool.Data storage pool = _pools.get(poolId);
+        for (uint256 poolId = 0; poolId < pools.length(); poolId++) {
+            MerklePool.Data storage pool = pools.get(poolId);
             pool.update(poolContext);
         }
     }
