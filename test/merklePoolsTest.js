@@ -864,7 +864,7 @@ describe("MerklePools", () => {
         lpTokenBalance,
         unclaimedAtEndOfYear1
       );
-
+      
       await expect(
         await merklePools
           .connect(staker1)
@@ -874,7 +874,7 @@ describe("MerklePools", () => {
         .withArgs(staker1.address, 0, 0, lpTokenBalance, unclaimedAtEndOfYear1);
     });
 
-    it.only("doesn't allow address to claim another address's tokens", async () => {
+    it("fails with invalid proofs", async () => {
       const staker1 = accounts[2];
       const staker2 = accounts[3];
 
@@ -981,24 +981,205 @@ describe("MerklePools", () => {
           .claim(1, 0, lpTokenForStaker2, ticConsumedFromStaker2, proof1)
       ).to.be.revertedWith("MerklePools: INVALID_PROOF");
 
+      await expect(
+        merklePools
+          .connect(staker2)
+          .claim(1, 0, lpTokenForStaker2.add(100), ticConsumedFromStaker2, proof1)
+      ).to.be.revertedWith("MerklePools: INVALID_PROOF");
+
+      await expect(
+        merklePools
+          .connect(staker2)
+          .claim(1, 0, lpTokenForStaker2, ticConsumedFromStaker2, [])
+      ).to.be.revertedWith("MerklePools: INVALID_PROOF");
+
+      await expect(
+        merklePools
+          .connect(staker2)
+          .claim(1, 1, lpTokenForStaker2, ticConsumedFromStaker2, proof1)
+      ).to.be.revertedWith("MerklePools: INVALID_PROOF");
+
       await merklePools
         .connect(staker2)
         .claim(1, 0, lpTokenForStaker2, ticConsumedFromStaker2, proof1);
     });
 
-    it("doesn't allow address to claim more than set", async () => {});
+    it("fails before proof is set", async () => {
+      const staker1 = accounts[2];
+      // transfer in TIC
+      const staker1TIC = ethers.utils.parseUnits("200", 18);
+      await ticToken.mint(staker1.address, staker1TIC);
 
-    it("fails with bad proof", async () => {});
+      // stake tic
+      await ticToken.connect(staker1).approve(merklePools.address, staker1TIC);
+      await merklePools.connect(staker1).deposit(0, staker1TIC.div(2));
 
-    it("fails before proof is set", async () => {});
+      // get current unclaimed amount
+      const start = Math.round(Date.now() / 1000);
+      const elapsedTime = 60 * 60 * 24 * 365; // 1 year
+      const endOfYear1 = start + elapsedTime;
 
-    it("fails if not all data is consistent", async () => {});
+      // advance block time
+      await ethers.provider.send("evm_setNextBlockTimestamp", [endOfYear1]);
+      await ethers.provider.send("evm_mine");
+      const unclaimedAtEndOfYear1 = await merklePools.getPoolTotalUnclaimed(0);
 
-    it("fails if merkle tree is out of sync with contract", async () => {});
+      // generate LP tokens so we can claim some!
+      const ticPrice = 10;
+      const usdcToAdd = unclaimedAtEndOfYear1.div(ticPrice);
+      expect(await exchange.balanceOf(merklePools.address)).to.equal(0);
+      await usdcToken.approve(merklePools.address, usdcToAdd);
+      await merklePools.generateLPTokens(
+        0,
+        unclaimedAtEndOfYear1,
+        usdcToAdd,
+        unclaimedAtEndOfYear1.sub(1),
+        usdcToAdd.sub(1),
+        endOfYear1 + 6000
+      );
 
-    it("transfers correct token amount for single claim", async () => {});
+      const lpTokenBalance = await exchange.balanceOf(merklePools.address);
+      // generate the tree
+      const tree1 = new BalanceTree([
+        {
+          account: staker1.address,
+          poolId: 0,
+          totalLPTokenAmount: lpTokenBalance,
+          totalTICAmount: unclaimedAtEndOfYear1,
+        },
+      ]);
 
-    it("transfers correct token amount for successive claims", async () => {});
+      const proof1 = tree1.getProof(
+        0,
+        staker1.address,
+        0,
+        lpTokenBalance,
+        unclaimedAtEndOfYear1
+      );
+
+      await expect(
+        merklePools
+          .connect(staker1)
+          .claim(0, 0, lpTokenBalance, unclaimedAtEndOfYear1, proof1)
+      ).to.be.revertedWith("MerklePools: CLAIMS_DISABLED");
+
+      const tree2 = new BalanceTree([
+        {
+          account: staker1.address,
+          poolId: 1,
+          totalLPTokenAmount: lpTokenBalance,
+          totalTICAmount: unclaimedAtEndOfYear1,
+        },
+      ]);
+      
+      await merklePools.setMerkleRoot(tree2.getHexRoot());
+      await expect(
+        merklePools
+          .connect(staker1)
+          .claim(0, 0, lpTokenBalance, unclaimedAtEndOfYear1, proof1)
+      ).to.be.revertedWith("MerklePools: INVALID_PROOF");
+
+      await merklePools.setMerkleRoot(ZERO_BYTES32);
+      await expect(
+        merklePools
+          .connect(staker1)
+          .claim(0, 0, lpTokenBalance, unclaimedAtEndOfYear1, proof1)
+      ).to.be.revertedWith("MerklePools: INVALID_PROOF");
+
+      await merklePools.setMerkleRoot(tree1.getHexRoot());
+      await merklePools
+      .connect(staker1)
+      .claim(0, 0, lpTokenBalance, unclaimedAtEndOfYear1, proof1);
+      expect(await exchange.balanceOf(staker1.address)).to.equal(lpTokenBalance);
+    });
+
+    it("transfers correct token amount for successive claims", async () => {
+      const staker1 = accounts[2];
+      // transfer in TIC
+      const staker1TIC = ethers.utils.parseUnits("200", 18);
+      await ticToken.mint(staker1.address, staker1TIC);
+
+      // stake tic
+      await ticToken.connect(staker1).approve(merklePools.address, staker1TIC);
+      await merklePools.connect(staker1).deposit(0, staker1TIC.div(2));
+
+      // get current unclaimed amount
+      const start = Math.round(Date.now() / 1000);
+      const elapsedTime = 60 * 60 * 24 * 365; // 1 year
+      const endOfYear1 = start + elapsedTime;
+
+      // advance block time
+      await ethers.provider.send("evm_setNextBlockTimestamp", [endOfYear1]);
+      await ethers.provider.send("evm_mine");
+      const unclaimedAtEndOfYear1 = await merklePools.getPoolTotalUnclaimed(0);
+
+      // generate LP tokens so we can claim some!
+      const ticPrice = 10;
+      const usdcToAdd = unclaimedAtEndOfYear1.div(ticPrice);
+      expect(await exchange.balanceOf(merklePools.address)).to.equal(0);
+      await usdcToken.approve(merklePools.address, usdcToAdd);
+      await merklePools.generateLPTokens(
+        0,
+        unclaimedAtEndOfYear1,
+        usdcToAdd,
+        unclaimedAtEndOfYear1.sub(1),
+        usdcToAdd.sub(1),
+        endOfYear1 + 6000
+      );
+
+      const lpTokenBalance = await exchange.balanceOf(merklePools.address);
+      
+      // generate the tree
+      const tree1 = new BalanceTree([
+        {
+          account: staker1.address,
+          poolId: 0,
+          totalLPTokenAmount: lpTokenBalance.div(2),
+          totalTICAmount: unclaimedAtEndOfYear1.div(2),
+        },
+      ]);
+
+      // set the root
+      await merklePools.setMerkleRoot(tree1.getHexRoot());
+      const proof1 = tree1.getProof(
+        0,
+        staker1.address,
+        0,
+        lpTokenBalance.div(2),
+        unclaimedAtEndOfYear1.div(2)
+      );
+
+      await merklePools
+        .connect(staker1)
+        .claim(0, 0, lpTokenBalance.div(2), unclaimedAtEndOfYear1.div(2), proof1);
+
+      
+        expect(await exchange.balanceOf(staker1.address)).to.equal(lpTokenBalance.div(2));
+
+        const tree2 = new BalanceTree([
+          {
+            account: staker1.address,
+            poolId: 0,
+            totalLPTokenAmount: lpTokenBalance,
+            totalTICAmount: unclaimedAtEndOfYear1,
+          },
+        ]);
+  
+        // set the root
+        await merklePools.setMerkleRoot(tree2.getHexRoot());
+        const proof2 = tree2.getProof(
+          0,
+          staker1.address,
+          0,
+          lpTokenBalance,
+          unclaimedAtEndOfYear1
+        );
+        
+        await merklePools
+          .connect(staker1)
+          .claim(0, 0, lpTokenBalance, unclaimedAtEndOfYear1, proof1);
+        expect(await exchange.balanceOf(staker1.address)).to.equal(lpTokenBalance);
+    });
 
     it("allows forfeited tokens to be claimed once", async () => {});
 
