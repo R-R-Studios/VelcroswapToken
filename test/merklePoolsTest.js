@@ -239,6 +239,62 @@ describe("MerklePools", () => {
       expect(await usdcToken.balanceOf(merklePools.address)).to.equal(0);
     });
 
+    it("it sends back extra quote token", async () => {
+      // clean start
+      const staker1 = accounts[2];
+      const staker1TIC = ethers.utils.parseUnits("400", 18);
+      await ticToken.mint(accounts[0].address, staker1TIC);
+      await ticToken.mint(staker1.address, staker1TIC);
+
+      // stake tic
+      await ticToken.connect(staker1).approve(merklePools.address, staker1TIC);
+      await merklePools.connect(staker1).deposit(0, staker1TIC);
+
+      // add approval for usdc
+      await usdcToken.approve(
+        merklePools.address,
+        await usdcToken.balanceOf(accounts[0].address)
+      );
+
+      const usdcToAdd = ethers.utils.parseUnits("100", 18);
+      const ticToBeMinted = usdcToAdd.div(10); // TIC = $10USDC
+
+      const start = Math.round(Date.now() / 1000);
+      const futureTime = start + 60 * 60 * 60 * 24 * 365;
+      const expirationTimestamp = futureTime + 600;
+
+      await ethers.provider.send("evm_setNextBlockTimestamp", [futureTime]);
+      await ethers.provider.send("evm_mine");
+
+      await ticToken.approve(exchange.address, staker1TIC);
+      await usdcToken.approve(exchange.address, staker1TIC);
+      await exchange.addLiquidity(
+        ticToBeMinted.sub(ethers.utils.parseUnits("3", 18)),
+        usdcToAdd.sub(ethers.utils.parseUnits("10", 18)),
+        0,
+        0,
+        accounts[0].address,
+        expirationTimestamp
+      );
+
+      // add a bunch of extra usdc
+      const usdcBalBefore = await usdcToken.balanceOf(accounts[0].address);
+      const usdcToSendIn = usdcToAdd.add(ethers.utils.parseUnits("500", 18));
+      await merklePools.generateLPTokens(
+        0,
+        ticToBeMinted,
+        usdcToSendIn,
+        ticToBeMinted.sub(ethers.utils.parseUnits("10", 18)),
+        usdcToAdd.sub(ethers.utils.parseUnits("50", 18)),
+        expirationTimestamp
+      );
+      // ensure its all sent back
+      expect(await usdcToken.balanceOf(merklePools.address)).to.equal(0);
+      const usdcBalAfter = await usdcToken.balanceOf(accounts[0].address);
+      // change in balance is less than we sent in, we got refunded!
+      expect(usdcBalBefore.sub(usdcBalAfter).lt(usdcToSendIn)).to.be.true;
+    });
+
     it("fails from non governance address", async () => {
       // clean start
       const staker1 = accounts[2];
