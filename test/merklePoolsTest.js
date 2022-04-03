@@ -212,7 +212,7 @@ describe("MerklePools", () => {
         usdcToAdd.sub(ethers.utils.parseUnits("50", 18)),
         expirationTimestamp
       );
-
+      expect(await usdcToken.balanceOf(merklePools.address)).to.equal(0);
       expect(
         (await merklePools.excessTICFromSlippage()).gt(
           ethers.utils.parseUnits("2", 18)
@@ -235,6 +235,7 @@ describe("MerklePools", () => {
         expirationTimestamp
       );
       expect(await merklePools.excessTICFromSlippage()).to.eq(0);
+      expect(await usdcToken.balanceOf(merklePools.address)).to.equal(0);
     });
 
     it("fails from non governance address", async () => {

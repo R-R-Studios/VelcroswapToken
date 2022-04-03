@@ -58,7 +58,7 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
     );
 
     event MerkleRootUpdated(bytes32 merkleRoot);
-    event LPTokensGenerated(uint256 lpAmountCreated, uint256 ticConsumed);
+    event LPTokensGenerated(uint256 lpAmountCreated, uint256 ticConsumed, uint256 quoteTokenConsumed);
     constructor() {}
 
     function initialize(
@@ -289,8 +289,11 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
 
         ticToken.mint(address(this), ticBalanceToBeMinted);
         IERC20Upgradeable(quoteToken).safeTransferFrom(msg.sender, address(this), _quoteTokenQty);
+        
         uint256 lpBalanceBefore = IERC20Upgradeable(elasticLPToken).balanceOf(address(this));
         uint256 ticBalanceBefore = ticToken.balanceOf(address(this));
+        uint256 quoteTokenBalanceBefore = IERC20Upgradeable(quoteToken).balanceOf(address(this));
+
         Exchange(address(elasticLPToken)).addLiquidity(
             _ticTokenQty,
             _quoteTokenQty,
@@ -299,6 +302,7 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
             address(this),
             _expirationTimestamp
         );
+        
         uint256 lpBalanceCreated =
             IERC20Upgradeable(elasticLPToken).balanceOf(address(this)) - lpBalanceBefore;
         require(lpBalanceCreated != 0, "MerklePools: NO_LP_CREATED");
@@ -308,7 +312,16 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
         excessTICFromSlippage = _ticTokenQty - ticBalanceConsumed; //save for next time
 
         _pool.totalUnclaimedTICInLP += ticBalanceConsumed;
-        emit LPTokensGenerated(lpBalanceCreated, ticBalanceConsumed);
+        uint256 quoteTokenConsumed = quoteTokenBalanceBefore - IERC20Upgradeable(quoteToken).balanceOf(address(this));
+        
+        if(quoteTokenConsumed < _quoteTokenQty) {
+          // refund the rest to the caller
+          unchecked {
+            IERC20Upgradeable(quoteToken).safeTransfer(msg.sender, _quoteTokenQty - quoteTokenConsumed);
+          }
+        }
+
+        emit LPTokensGenerated(lpBalanceCreated, ticBalanceConsumed, quoteTokenConsumed);
     }
 
     /**
