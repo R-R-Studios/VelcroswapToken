@@ -70,7 +70,6 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
     ) external initializer {
         require(_governance != address(0), "MerklePools: INVALID_ADDRESS");
         ReentrancyGuardUpgradeable.__ReentrancyGuard_init();
-        ContextUpgradeable.__Context_init();
         ticToken = _ticToken;
         governance = _governance;
         elasticLPToken = _elasticLPToken;
@@ -337,7 +336,7 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
         uint256 _totalLPTokenAmount,
         uint256 _totalTICAmount,
         bytes32[] calldata _merkleProof
-    ) external {
+    ) external nonReentrant {
         require(isClaimsEnabled, "MerklePools: CLAIMS_DISABLED");
 
         // Verify the merkle proof.
