@@ -1,0 +1,9 @@
+// SPDX-License-Identifier: GPL-3.0
+
+pragma solidity 0.8.4;
+
+import "../MerklePools.sol";
+
+contract MerklePoolsV2 is MerklePools {
+    uint256 public constant versionNumber = 2;
+}

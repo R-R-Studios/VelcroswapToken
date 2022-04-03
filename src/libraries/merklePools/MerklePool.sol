@@ -1,17 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 import "../FixedPointMath.sol";
 
 /// @title Pool
 ///
-/// @dev A library which provides the Pool data struct and associated functions.
-library Pool {
+/// @dev A library which provides the Merkle Pool data struct and associated functions.
+library MerklePool {
     using FixedPointMath for FixedPointMath.FixedDecimal;
-    using Pool for Pool.Data;
-    using Pool for Pool.List;
+    using MerklePool for MerklePool.Data;
+    using MerklePool for MerklePool.List;
 
     struct Context {
         uint256 rewardRate;
@@ -19,8 +17,10 @@ library Pool {
     }
 
     struct Data {
-        IERC20 token;
+        address token;
         uint256 totalDeposited;
+        uint256 totalUnclaimedTIC;
+        uint256 totalUnclaimedTICInLP;
         uint256 rewardWeight;
         FixedPointMath.FixedDecimal accumulatedRewardWeight;
         uint256 lastUpdatedBlockTimestamp;
@@ -37,6 +37,9 @@ library Pool {
         _data.accumulatedRewardWeight = _data.getUpdatedAccumulatedRewardWeight(
             _ctx
         );
+
+        // TODO: make this more gas efficient! we calc it twice!
+        _data.totalUnclaimedTIC = _data.getUpdatedTotalUnclaimed(_ctx);
         _data.lastUpdatedBlockTimestamp = block.timestamp;
     }
 
@@ -53,6 +56,7 @@ library Pool {
         if (_ctx.totalRewardWeight == 0) {
             return 0;
         }
+
         return (_ctx.rewardRate * _data.rewardWeight) / _ctx.totalRewardWeight;
     }
 
@@ -68,25 +72,53 @@ library Pool {
         if (_data.totalDeposited == 0) {
             return _data.accumulatedRewardWeight;
         }
-
-        uint256 _elapsedTime =
-            block.timestamp - _data.lastUpdatedBlockTimestamp;
-        if (_elapsedTime == 0) {
+        uint256 amountToDistribute = _data.getUpdatedAmountToDistribute(_ctx);
+        if (amountToDistribute == 0) {
             return _data.accumulatedRewardWeight;
         }
 
-        uint256 _rewardRate = _data.getRewardRate(_ctx);
-        uint256 _amountToDistribute = _rewardRate * _elapsedTime;
-
-        if (_amountToDistribute == 0) {
-            return _data.accumulatedRewardWeight;
-        }
-
-        FixedPointMath.FixedDecimal memory _rewardWeight =
-            FixedPointMath.fromU256(_amountToDistribute).div(
+        FixedPointMath.FixedDecimal memory rewardWeight =
+            FixedPointMath.fromU256(amountToDistribute).div(
                 _data.totalDeposited
             );
-        return _data.accumulatedRewardWeight.add(_rewardWeight);
+
+        return _data.accumulatedRewardWeight.add(rewardWeight);
+    }
+
+    /**
+     * @dev get's the total amount to distribute in this pool based on the last updated timestamp.
+     * @param _data pool's data
+     * @param _ctx the pool context
+     */
+    function getUpdatedAmountToDistribute(
+        Data storage _data,
+        Context storage _ctx
+    ) internal view returns (uint256) {
+        uint256 elapsedTime = block.timestamp - _data.lastUpdatedBlockTimestamp;
+
+        if (elapsedTime == 0) {
+            return 0;
+        }
+
+        uint256 rewardRate = _data.getRewardRate(_ctx);
+        return rewardRate * elapsedTime;
+    }
+
+    /**
+     * @dev get's the total amount unclaimed in this pool based on the last updated timestamp.
+     * @param _data pool's data
+     * @param _ctx the pool context
+     */
+    function getUpdatedTotalUnclaimed(Data storage _data, Context storage _ctx)
+        internal
+        view
+        returns (uint256)
+    {
+        if (_data.totalDeposited == 0) {
+            return _data.totalUnclaimedTIC;
+        }
+        return
+            _data.totalUnclaimedTIC + _data.getUpdatedAmountToDistribute(_ctx);
     }
 
     /// @dev Adds an element to the list.
@@ -106,6 +138,7 @@ library Pool {
         view
         returns (Data storage)
     {
+        require(_index < _self.elements.length, "MerklePool: INVALID_INDEX");
         return _self.elements[_index];
     }
 
@@ -124,8 +157,7 @@ library Pool {
     ///
     /// @return the index of the last element.
     function lastIndex(List storage _self) internal view returns (uint256) {
-        uint256 _length = _self.length();
-        return _length - 1;
+        return _self.length() - 1;
     }
 
     /// @dev Gets the number of elements in the list.

@@ -185,130 +185,32 @@ describe("StakingPools", () => {
     });
   });
 
-  // test getpoolToken and getPoolRewardWeight
-  // getPoolRewardRate
+  describe("setRewardRates", () => {
+    it("works correctly if staker stakes before first configuration", async () => {
+      const staker1 = accounts[1];
+      const StakingPools = await ethers.getContractFactory("StakingPools");
+      const stakingPools1 = await StakingPools.deploy(
+        ticToken.address,
+        accounts[0].address
+      );
+      await stakingPools1.deployed();
 
-  // describe("createNewExchange", () => {
-  //   it("Should deploy a new exchange and add to mappings", async () => {
-  //     await exchangeFactory
-  //       .connect(deployer)
-  //       .createNewExchange(baseToken.address, quoteToken.address);
-  //     const exchangeAddress =
-  //       await exchangeFactory.exchangeAddressByTokenAddress(
-  //         baseToken.address,
-  //         quoteToken.address
-  //       );
-  //     expect(
-  //       await exchangeFactory.isValidExchangeAddress(exchangeAddress)
-  //     ).to.equal(true);
-  //   });
+      // create pool
+      await stakingPools1.createPool(ticToken.address);
+      await stakingPools1.createPool(timeTokenTeam.address);
 
-  //   it("Should deploy a new exchange with correct name, symbol and addresses", async () => {
-  //     await exchangeFactory
-  //       .connect(deployer)
-  //       .createNewExchange(baseToken.address, quoteToken.address);
+      // stake prior to any weights being set.
+      const amount = ethers.utils.parseUnits("200", 18);
+      await ticToken.mint(staker1.address, amount);
+      await ticToken.connect(staker1).approve(stakingPools1.address, amount);
+      await stakingPools1.connect(staker1).deposit(0, amount);
 
-  //     const exchangeAddress =
-  //       await exchangeFactory.exchangeAddressByTokenAddress(
-  //         baseToken.address,
-  //         quoteToken.address
-  //       );
-
-  //     const Exchange = await deployments.get("EGT Exchange");
-  //     const exchange = new ethers.Contract(
-  //       exchangeAddress,
-  //       Exchange.abi,
-  //       deployer
-  //     );
-
-  //     expect(await exchange.name()).to.equal(
-  //       "ETMvFUSD ElasticSwap Liquidity Token"
-  //     );
-  //     expect(await exchange.symbol()).to.equal("ETMvFUSD-ELP");
-  //     expect(await exchange.quoteToken()).to.equal(quoteToken.address);
-  //     expect(await exchange.baseToken()).to.equal(baseToken.address);
-  //   });
-
-  //   it("Should deploy a new exchange and emit the correct ExchangeAdded event", async () => {
-  //     expect(
-  //       await exchangeFactory
-  //         .connect(deployer)
-  //         .createNewExchange(baseToken.address, quoteToken.address)
-  //     ).to.emit(exchangeFactory, "NewExchange");
-  //   });
-
-  //   it("Should revert when the same token pair is attempted to be added twice", async () => {
-  //     await exchangeFactory
-  //       .connect(deployer)
-  //       .createNewExchange(baseToken.address, quoteToken.address);
-  //     await expect(
-  //       exchangeFactory
-  //         .connect(deployer)
-  //         .createNewExchange(baseToken.address, quoteToken.address)
-  //     ).to.be.revertedWith("ExchangeFactory: DUPLICATE_EXCHANGE");
-  //   });
-
-  //   it("Should revert when the same token is attempted to be used for both quote and base", async () => {
-  //     await expect(
-  //       exchangeFactory
-  //         .connect(deployer)
-  //         .createNewExchange(baseToken.address, baseToken.address)
-  //     ).to.be.revertedWith("ExchangeFactory: IDENTICAL_TOKENS");
-  //   });
-
-  //   it("Should revert when either token address is a null address", async () => {
-  //     await expect(
-  //       exchangeFactory
-  //         .connect(deployer)
-  //         .createNewExchange(baseToken.address, ethers.constants.AddressZero)
-  //     ).to.be.revertedWith("ExchangeFactory: INVALID_TOKEN_ADDRESS");
-
-  //     await expect(
-  //       exchangeFactory
-  //         .connect(deployer)
-  //         .createNewExchange(ethers.constants.AddressZero, quoteToken.address)
-  //     ).to.be.revertedWith("ExchangeFactory: INVALID_TOKEN_ADDRESS");
-  //   });
-
-  //   it("Should revert when a non owner attempts to change the fee address", async () => {
-  //     const newFeeAddress = accounts[8].address;
-  //     await expect(
-  //       exchangeFactory.connect(accounts[1]).setFeeAddress(newFeeAddress)
-  //     ).to.be.revertedWith("Ownable: caller is not the owner");
-  //   });
-  // });
-
-  // describe("setFeeAddress", () => {
-  //   it("Should allow the fee address to be changed by the owner", async () => {
-  //     const newFeeAddress = accounts[8].address;
-  //     await exchangeFactory.setFeeAddress(newFeeAddress);
-  //     expect(await exchangeFactory.feeAddress()).to.equal(newFeeAddress);
-  //   });
-
-  //   it("Should emit SetFeeAddress", async () => {
-  //     const newFeeAddress = accounts[8].address;
-  //     await expect(exchangeFactory.setFeeAddress(newFeeAddress))
-  //       .to.emit(exchangeFactory, "SetFeeAddress")
-  //       .withArgs(newFeeAddress);
-  //   });
-
-  //   it("Should revert when the fee a owner attempts to change the fee address", async () => {
-  //     const newFeeAddress = accounts[8].address;
-  //     await expect(
-  //       exchangeFactory.connect(accounts[1]).setFeeAddress(newFeeAddress)
-  //     ).to.be.revertedWith("Ownable: caller is not the owner");
-  //   });
-
-  //   it("Should revert when the owner attempts to change the fee address to the zero address", async () => {
-  //     await expect(
-  //       exchangeFactory.setFeeAddress(ethers.constants.AddressZero)
-  //     ).to.be.revertedWith("ExchangeFactory: INVAlID_FEE_ADDRESS");
-  //   });
-
-  //   it("Should revert when the owner attempts to change the fee address to the same address", async () => {
-  //     await expect(
-  //       exchangeFactory.setFeeAddress(await exchangeFactory.feeAddress())
-  //     ).to.be.revertedWith("ExchangeFactory: INVAlID_FEE_ADDRESS");
-  //   });
-  // });
+      const next = Math.round(Date.now() / 1000) + 3600;
+      await ethers.provider.send("evm_setNextBlockTimestamp", [next]);
+      await ethers.provider.send("evm_mine");
+      // attempt to set weights
+      await stakingPools1.setRewardWeights([100, 100]);
+      expect(await stakingPools1.getPoolRewardWeight(0)).to.eq(100);
+    });
+  });
 });
