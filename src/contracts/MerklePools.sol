@@ -5,7 +5,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/MerkleProofUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 
 
 import "./MerklePoolsStorage.sol";
@@ -19,7 +18,7 @@ import "@elasticswap/elasticswap/src/contracts/Exchange.sol";
 /// @title MerklePools
 /// @notice A contract which allows users to stake to farm tokens that are "realized" once
 /// profits enter the system and can be claimed via a merkle proof.
-contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable, ContextUpgradeable {
+contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
     using FixedPointMath for FixedPointMath.FixedDecimal;
     using MerklePool for MerklePool.Data;
     using MerklePool for MerklePool.List;
@@ -87,7 +86,7 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable, ContextU
      * @dev A modifier which reverts when the caller is not the governance.
      */
     modifier onlyGovernance() {
-        require(_msgSender() == governance, "MerklePools: ONLY_GOVERNANCE");
+        require(msg.sender == governance, "MerklePools: ONLY_GOVERNANCE");
         _;
     }
 
@@ -109,7 +108,7 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable, ContextU
     }
 
     function acceptGovernance() external {
-        require(_msgSender() == pendingGovernance, "MerklePools: ONLY_PENDING");
+        require(msg.sender == pendingGovernance, "MerklePools: ONLY_PENDING");
 
         address pendingGovernance_ = pendingGovernance;
         governance = pendingGovernance_;
@@ -222,18 +221,18 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable, ContextU
         external
         nonReentrant
     {
-        require(_msgSender() != forfeitAddress, "MerklePools: UNUSABLE_ADDRESS");
+        require(msg.sender != forfeitAddress, "MerklePools: UNUSABLE_ADDRESS");
         MerklePool.Data storage pool = pools.get(_poolId);
         pool.update(poolContext);
 
-        MerkleStake.Data storage stake = stakes[_msgSender()][_poolId];
+        MerkleStake.Data storage stake = stakes[msg.sender][_poolId];
         stake.update(pool, poolContext);
 
         pool.totalDeposited = pool.totalDeposited + _depositAmount;
         stake.totalDeposited = stake.totalDeposited + _depositAmount;
 
-        IERC20Upgradeable(pool.token).safeTransferFrom(_msgSender(), address(this), _depositAmount);
-        emit TokensDeposited(_msgSender(), _poolId, _depositAmount);
+        IERC20Upgradeable(pool.token).safeTransferFrom(msg.sender, address(this), _depositAmount);
+        emit TokensDeposited(msg.sender, _poolId, _depositAmount);
     }
 
     /**
@@ -244,7 +243,7 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable, ContextU
         MerklePool.Data storage pool = pools.get(_poolId);
         pool.update(poolContext);
 
-        MerkleStake.Data storage stake = stakes[_msgSender()][_poolId];
+        MerkleStake.Data storage stake = stakes[msg.sender][_poolId];
         stake.update(pool, poolContext);
 
         uint256 withdrawAmount = stake.totalDeposited;
@@ -258,8 +257,8 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable, ContextU
         forfeitStake.totalUnclaimed += stake.totalUnclaimed;
         stake.totalUnclaimed = 0;
 
-        IERC20Upgradeable(pool.token).safeTransfer(_msgSender(), withdrawAmount);
-        emit TokensWithdrawn(_msgSender(), _poolId, withdrawAmount);
+        IERC20Upgradeable(pool.token).safeTransfer(msg.sender, withdrawAmount);
+        emit TokensWithdrawn(msg.sender, _poolId, withdrawAmount);
     }
 
     /**
@@ -290,7 +289,7 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable, ContextU
         uint256 ticBalanceToBeMinted = _ticTokenQty - excessTICFromSlippage;
 
         ticToken.mint(address(this), ticBalanceToBeMinted);
-        IERC20Upgradeable(quoteToken).safeTransferFrom(_msgSender(), address(this), _quoteTokenQty);
+        IERC20Upgradeable(quoteToken).safeTransferFrom(msg.sender, address(this), _quoteTokenQty);
         uint256 lpBalanceBefore = IERC20Upgradeable(elasticLPToken).balanceOf(address(this));
         uint256 ticBalanceBefore = ticToken.balanceOf(address(this));
         Exchange(address(elasticLPToken)).addLiquidity(
@@ -346,7 +345,7 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable, ContextU
             keccak256(
                 abi.encodePacked(
                     _index,
-                    _msgSender(),
+                    msg.sender,
                     _poolId,
                     _totalLPTokenAmount,
                     _totalTICAmount
@@ -358,7 +357,7 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable, ContextU
             "MerklePools: INVALID_PROOF"
         );
 
-        MerkleStake.Data storage stake = stakes[_msgSender()][_poolId];
+        MerkleStake.Data storage stake = stakes[msg.sender][_poolId];
         uint256 alreadyClaimedLPAmount = stake.totalClaimedLP;
         uint256 alreadyClaimedTICAmount = stake.totalClaimedTIC;
 
@@ -399,9 +398,9 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable, ContextU
         pool.totalUnclaimedTIC -= ticTokenAmountToBeClaimed;
         pool.totalUnclaimedTICInLP -= ticTokenAmountToBeClaimed;
 
-        IERC20Upgradeable(elasticLPToken).safeTransfer(_msgSender(), lpTokenAmountToBeClaimed);
+        IERC20Upgradeable(elasticLPToken).safeTransfer(msg.sender, lpTokenAmountToBeClaimed);
         emit TokensClaimed(
-            _msgSender(),
+            msg.sender,
             _index,
             _poolId,
             lpTokenAmountToBeClaimed,
