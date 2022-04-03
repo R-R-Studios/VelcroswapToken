@@ -335,12 +335,10 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
                 IERC20Upgradeable(quoteToken).balanceOf(address(this));
         if (quoteTokenConsumed < _quoteTokenQty) {
             // refund the rest to the caller
-            unchecked {
-                IERC20Upgradeable(quoteToken).safeTransfer(
-                    msg.sender,
-                    _quoteTokenQty - quoteTokenConsumed
-                );
-            }
+            IERC20Upgradeable(quoteToken).safeTransfer(
+                msg.sender,
+                _quoteTokenQty - quoteTokenConsumed
+            );
         }
 
         emit LPTokensGenerated(
