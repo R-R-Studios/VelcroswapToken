@@ -3,7 +3,7 @@ const { MerkleTree } = require("./MerkleTree");
 
 class BalanceTree {
   constructor(balances) {
-    if(balances.length < 2) {
+    if (balances.length < 2) {
       throw new Error("Tree must have 2 or more nodes / leaves");
     }
     this._tree = new MerkleTree(

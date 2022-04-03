@@ -6,7 +6,6 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/MerkleProofUpgradeable.sol";
 
-
 import "./MerklePoolsStorage.sol";
 import "../libraries/FixedPointMath.sol";
 import "../interfaces/IMintableERC20.sol";
@@ -58,7 +57,12 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
     );
 
     event MerkleRootUpdated(bytes32 merkleRoot);
-    event LPTokensGenerated(uint256 lpAmountCreated, uint256 ticConsumed, uint256 quoteTokenConsumed);
+    event LPTokensGenerated(
+        uint256 lpAmountCreated,
+        uint256 ticConsumed,
+        uint256 quoteTokenConsumed
+    );
+
     constructor() {}
 
     function initialize(
@@ -78,7 +82,10 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
 
         // grant approval to exchange so we can mint
         ticToken.approve(address(_elasticLPToken), type(uint256).max);
-        IERC20Upgradeable(quoteToken).approve(address(_elasticLPToken), type(uint256).max);
+        IERC20Upgradeable(quoteToken).approve(
+            address(_elasticLPToken),
+            type(uint256).max
+        );
     }
 
     /**
@@ -130,7 +137,7 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
     /**
      * @dev Sets the address rewards are forfeited to when a staker exits prior to realizing
      * their rewards.
-     * @param _forfeitAddress address to set. 
+     * @param _forfeitAddress address to set.
      */
     function setForfeitAddress(address _forfeitAddress)
         external
@@ -230,7 +237,11 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
         pool.totalDeposited = pool.totalDeposited + _depositAmount;
         stake.totalDeposited = stake.totalDeposited + _depositAmount;
 
-        IERC20Upgradeable(pool.token).safeTransferFrom(msg.sender, address(this), _depositAmount);
+        IERC20Upgradeable(pool.token).safeTransferFrom(
+            msg.sender,
+            address(this),
+            _depositAmount
+        );
         emit TokensDeposited(msg.sender, _poolId, _depositAmount);
     }
 
@@ -288,11 +299,17 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
         uint256 ticBalanceToBeMinted = _ticTokenQty - excessTICFromSlippage;
 
         ticToken.mint(address(this), ticBalanceToBeMinted);
-        IERC20Upgradeable(quoteToken).safeTransferFrom(msg.sender, address(this), _quoteTokenQty);
-        
-        uint256 lpBalanceBefore = IERC20Upgradeable(elasticLPToken).balanceOf(address(this));
+        IERC20Upgradeable(quoteToken).safeTransferFrom(
+            msg.sender,
+            address(this),
+            _quoteTokenQty
+        );
+
+        uint256 lpBalanceBefore =
+            IERC20Upgradeable(elasticLPToken).balanceOf(address(this));
         uint256 ticBalanceBefore = ticToken.balanceOf(address(this));
-        uint256 quoteTokenBalanceBefore = IERC20Upgradeable(quoteToken).balanceOf(address(this));
+        uint256 quoteTokenBalanceBefore =
+            IERC20Upgradeable(quoteToken).balanceOf(address(this));
 
         Exchange(address(elasticLPToken)).addLiquidity(
             _ticTokenQty,
@@ -302,9 +319,10 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
             address(this),
             _expirationTimestamp
         );
-        
+
         uint256 lpBalanceCreated =
-            IERC20Upgradeable(elasticLPToken).balanceOf(address(this)) - lpBalanceBefore;
+            IERC20Upgradeable(elasticLPToken).balanceOf(address(this)) -
+                lpBalanceBefore;
         require(lpBalanceCreated != 0, "MerklePools: NO_LP_CREATED");
 
         uint256 ticBalanceConsumed =
@@ -312,16 +330,25 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
         excessTICFromSlippage = _ticTokenQty - ticBalanceConsumed; //save for next time
 
         _pool.totalUnclaimedTICInLP += ticBalanceConsumed;
-        uint256 quoteTokenConsumed = quoteTokenBalanceBefore - IERC20Upgradeable(quoteToken).balanceOf(address(this));
-        
-        if(quoteTokenConsumed < _quoteTokenQty) {
-          // refund the rest to the caller
-          unchecked {
-            IERC20Upgradeable(quoteToken).safeTransfer(msg.sender, _quoteTokenQty - quoteTokenConsumed);
-          }
+        uint256 quoteTokenConsumed =
+            quoteTokenBalanceBefore -
+                IERC20Upgradeable(quoteToken).balanceOf(address(this));
+
+        if (quoteTokenConsumed < _quoteTokenQty) {
+            // refund the rest to the caller
+            unchecked {
+                IERC20Upgradeable(quoteToken).safeTransfer(
+                    msg.sender,
+                    _quoteTokenQty - quoteTokenConsumed
+                );
+            }
         }
 
-        emit LPTokensGenerated(lpBalanceCreated, ticBalanceConsumed, quoteTokenConsumed);
+        emit LPTokensGenerated(
+            lpBalanceCreated,
+            ticBalanceConsumed,
+            quoteTokenConsumed
+        );
     }
 
     /**
@@ -410,7 +437,10 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
         pool.totalUnclaimedTIC -= ticTokenAmountToBeClaimed;
         pool.totalUnclaimedTICInLP -= ticTokenAmountToBeClaimed;
 
-        IERC20Upgradeable(elasticLPToken).safeTransfer(msg.sender, lpTokenAmountToBeClaimed);
+        IERC20Upgradeable(elasticLPToken).safeTransfer(
+            msg.sender,
+            lpTokenAmountToBeClaimed
+        );
         emit TokensClaimed(
             msg.sender,
             _index,
@@ -496,7 +526,7 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @dev Gets the total amount of tokens unclaimed from a pool that are not yet "realized" in 
+     * @dev Gets the total amount of tokens unclaimed from a pool that are not yet "realized" in
      * the form of LP tokens
      * @param _poolId the identifier of the pool.
      * @return the total amount of unclaimed and un-minted tokens from a pool that are not in LP tokens

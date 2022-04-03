@@ -12,7 +12,7 @@ const TREE_FILL = {
   poolId: 0,
   totalLPTokenAmount: 0,
   totalTICAmount: 0,
-}
+};
 
 describe("MerklePools", () => {
   let accounts;
@@ -75,20 +75,21 @@ describe("MerklePools", () => {
 
     // Now we can finally deploy our merkle pool since we have all needed information!
     const MerklePools = await ethers.getContractFactory("MerklePools");
-    merklePools = await upgrades.deployProxy(MerklePools,
-      [
-        ticToken.address,
-        usdcToken.address,
-        exchange.address,
-        accounts[0].address,
-        accounts[0].address
-      ]
-    );
+    merklePools = await upgrades.deployProxy(MerklePools, [
+      ticToken.address,
+      usdcToken.address,
+      exchange.address,
+      accounts[0].address,
+      accounts[0].address,
+    ]);
     await merklePools.deployed();
 
     // upgrade our deployment to ensure all functionality still holds
     const MerklePoolsV2 = await ethers.getContractFactory("MerklePoolsV2");
-    merklePools = await upgrades.upgradeProxy(merklePools.address, MerklePoolsV2);
+    merklePools = await upgrades.upgradeProxy(
+      merklePools.address,
+      MerklePoolsV2
+    );
     await merklePools.deployed();
 
     // create two pools
@@ -721,7 +722,7 @@ describe("MerklePools", () => {
           totalLPTokenAmount: await exchange.balanceOf(merklePools.address),
           totalTICAmount: forfeitUnclaimed,
         },
-        TREE_FILL
+        TREE_FILL,
       ]);
 
       // set the root
@@ -798,15 +799,13 @@ describe("MerklePools", () => {
     it("works correctly if staker stakes before first configuration", async () => {
       const staker1 = accounts[1];
       const MerklePools = await ethers.getContractFactory("MerklePools");
-      const merklePools1 = await upgrades.deployProxy(MerklePools,
-        [
-          ticToken.address,
-          usdcToken.address,
-          exchange.address,
-          accounts[0].address,
-          accounts[0].address
-        ]
-      );
+      const merklePools1 = await upgrades.deployProxy(MerklePools, [
+        ticToken.address,
+        usdcToken.address,
+        exchange.address,
+        accounts[0].address,
+        accounts[0].address,
+      ]);
       await merklePools1.deployed();
 
       // create pool
@@ -872,7 +871,7 @@ describe("MerklePools", () => {
           totalLPTokenAmount: lpTokenBalance,
           totalTICAmount: unclaimedAtEndOfYear1,
         },
-        TREE_FILL
+        TREE_FILL,
       ]);
 
       // set the root
@@ -1083,7 +1082,7 @@ describe("MerklePools", () => {
           totalLPTokenAmount: lpTokenBalance,
           totalTICAmount: unclaimedAtEndOfYear1,
         },
-        TREE_FILL
+        TREE_FILL,
       ]);
 
       const proof1 = tree1.getProof(
@@ -1107,7 +1106,7 @@ describe("MerklePools", () => {
           totalLPTokenAmount: lpTokenBalance,
           totalTICAmount: unclaimedAtEndOfYear1,
         },
-        TREE_FILL
+        TREE_FILL,
       ]);
 
       await merklePools.setMerkleRoot(tree2.getHexRoot());
@@ -1341,13 +1340,15 @@ describe("MerklePools", () => {
 
   describe("initialize", () => {
     it("cannot be called twice", async () => {
-      await expect(merklePools.initialize(      
-        ticToken.address,
-        usdcToken.address,
-        exchange.address, 
-        accounts[0].address,
-        accounts[0].address
-      )).to.be.revertedWith("Initializable: contract is already initialized")
-    });    
+      await expect(
+        merklePools.initialize(
+          ticToken.address,
+          usdcToken.address,
+          exchange.address,
+          accounts[0].address,
+          accounts[0].address
+        )
+      ).to.be.revertedWith("Initializable: contract is already initialized");
+    });
   });
 });
