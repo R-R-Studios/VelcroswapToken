@@ -1,8 +1,8 @@
-module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
+module.exports = async ({ getNamedAccounts, deployments }) => {
   const { deploy, log } = deployments;
   const namedAccounts = await getNamedAccounts();
   const { admin, governance, tic, usdc, ticUsdcELP } = namedAccounts;
-  
+
   const deployResult = await deploy("MerklePools", {
     from: admin,
     contract: "MerklePools",
