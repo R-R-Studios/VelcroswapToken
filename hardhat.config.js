@@ -82,6 +82,18 @@ module.exports = {
     feeRecipient: {
       default: 5,
     },
+    tic: {
+      fuji: "0x4767ba6cb821df0ae2621f8f4cca22c93ab75945",
+      avalanche: "0x75739a693459f33B1FBcC02099eea3eBCF150cBe"
+    },
+    usdc: {
+      fuji: "0x6275b63a4ee560004c34431e573314426906cee9",
+      avalanche: "0xa7d7079b0fead91f3e65f86e8915cb59c1a4c664"
+    },
+    ticUsdcELP: {
+      fuji: "0xa7d7079b0fead91f3e65f86e8915cb59c1a4c664",     // FIXME!
+      avalanche: "0xa7d7079b0fead91f3e65f86e8915cb59c1a4c664" // FIXME!
+    }
   },
   contractSizer: {
     alphaSort: true,

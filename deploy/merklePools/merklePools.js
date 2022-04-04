@@ -1,12 +1,8 @@
-require("dotenv").config();
-
 module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
   const { deploy, log } = deployments;
   const namedAccounts = await getNamedAccounts();
-  const { admin, governance } = namedAccounts;
+  const { admin, governance, tic, usdc, ticUsdcELP } = namedAccounts;
   
-  const ticToken = await deployments.get("TicToken");
-
   const deployResult = await deploy("MerklePools", {
     from: admin,
     contract: "MerklePools",
@@ -16,11 +12,11 @@ module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
         init: {
           methodName: "initialize",
           args: [    
-            ticToken.address,
-            process.env.AVAX_USDC_ADDRESS,
-            process.env.AVAX_ELP_ADDRESS,
-            process.env.AVAX_GOVERNANCE_ADDRESS,
-            process.env.AVAX_GOVERNANCE_ADDRESS
+            tic,
+            usdc,
+            ticUsdcELP,
+            governance,
+            governance
           ],
         }
       }
@@ -33,6 +29,3 @@ module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
   }
 };
 module.exports.tags = ["MerklePools"];
-module.exports.dependencies = [
-  "TicToken",
-];
