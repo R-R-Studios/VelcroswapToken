@@ -36,3 +36,16 @@ deployed commit [653d1e6](https://github.com/ElasticSwap/token/tree/653d1e687454
 1. Renounce all rights from deployer address `HARDHAT_NETWORK="avalanche" node scripts/renounceRoles.js` 
 1. Publish all mainnet addresses
 1. When ready from DAO, call setRewardRate to enable staking (~24 hrs later) and set updated pool weights. 
+
+
+# Deploying MerklePools.sol with proxy to AVAX
+
+1. update HH config with correct address for USDC<>TIC ELP address
+1. Confirm the AVAX governance address
+1. Confirm HH config deploy is set to `deploy/merklePools` for AVAX
+1. Set the correct desired gasPrice in HH config
+1. `npx hardhat deploy --network avalanche`
+1. `npx hardhat --network avalanche etherscan-verify --api-key <APIKEY>`
+1. Transfer governance of MerklePools.sol
+1. Transfer ownership of the proxy admin
+1. Create pools
