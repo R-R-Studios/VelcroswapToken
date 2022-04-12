@@ -264,18 +264,19 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
         MerkleStake.Data storage forfeitStake = stakes[forfeitAddress][_poolId];
         forfeitStake.update(pool, poolContext);
 
-        forfeitStake.totalUnclaimed += stake.totalUnclaimed;
+        forfeitStake.totalUnrealized += stake.totalUnrealized;
         
-        // we need to zero our their total unclaimed and also ensure that they are unable to just
-        // re-enter and then claim using a stale merkle proof as their unclaimed increments again
-        // over time.  By adding their unclaimed to their totalClaimed, we ensure that any 
+        // we need to zero our their total unrealized and also ensure that they are unable to just
+        // re-enter and then claim using a stale merkle proof as their unrealized increments again
+        // over time.  By adding their unrealized to their totalRealized, we ensure that any 
         // existing merkle claim is now un-claimable by them until we generate a new merkle claim
-        // that accounts for these values.  This means that the sum of all stakes.totalClaimedTIC
-        // is not accurate and that we also need to check in the UI to not end up with negative
+        // that accounts for these values.  This means that the sum of all stakes.totalRealizedTIC
+        // is not accurate in terms of tic claimed 
+        // and that we also need to check in the UI to not end up with negative
         // claimable values.  The off chain accounting needs to consider this as well if a 
         // user does re-enter wit the same address in the future. 
-        stake.totalClaimedTIC += stake.totalUnclaimed; 
-        stake.totalUnclaimed = 0;
+        stake.totalRealizedTIC += stake.totalUnrealized; 
+        stake.totalUnrealized = 0;
         
 
         IERC20Upgradeable(pool.token).safeTransfer(msg.sender, withdrawAmount);
@@ -405,8 +406,8 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
         );
 
         MerkleStake.Data storage stake = stakes[msg.sender][_poolId];
-        uint256 alreadyClaimedLPAmount = stake.totalClaimedLP;
-        uint256 alreadyClaimedTICAmount = stake.totalClaimedTIC;
+        uint256 alreadyClaimedLPAmount = stake.totalRealizedLP;
+        uint256 alreadyClaimedTICAmount = stake.totalRealizedTIC;
 
         require(
             _totalLPTokenAmount > alreadyClaimedLPAmount &&
@@ -432,15 +433,15 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
         }
 
         require(
-            ticTokenAmountToBeClaimed <= stake.totalUnclaimed,
+            ticTokenAmountToBeClaimed <= stake.totalUnrealized,
             "MerklePools: INVALID_UNCLAIMED_AMOUNT"
         );
 
-        stake.totalClaimedLP = _totalLPTokenAmount;
-        stake.totalClaimedTIC = _totalTICAmount;
+        stake.totalRealizedLP = _totalLPTokenAmount;
+        stake.totalRealizedTIC = _totalTICAmount;
 
         unchecked {
-            stake.totalUnclaimed -= ticTokenAmountToBeClaimed;
+            stake.totalUnrealized -= ticTokenAmountToBeClaimed;
         }
         pool.totalUnclaimedTIC -= ticTokenAmountToBeClaimed;
         pool.totalUnclaimedTICInLP -= ticTokenAmountToBeClaimed;

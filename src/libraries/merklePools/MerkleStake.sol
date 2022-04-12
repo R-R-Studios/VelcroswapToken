@@ -14,9 +14,9 @@ library MerkleStake {
 
     struct Data {
         uint256 totalDeposited;
-        uint256 totalUnclaimed;
-        uint256 totalClaimedTIC;
-        uint256 totalClaimedLP;
+        uint256 totalUnrealized;
+        uint256 totalRealizedTIC;
+        uint256 totalRealizedLP;
         FixedPointMath.FixedDecimal lastAccumulatedWeight;
     }
 
@@ -25,7 +25,7 @@ library MerkleStake {
         MerklePool.Data storage _pool,
         MerklePool.Context storage _ctx
     ) internal {
-        _self.totalUnclaimed = _self.getUpdatedTotalUnclaimed(_pool, _ctx);
+        _self.totalUnrealized = _self.getUpdatedTotalUnclaimed(_pool, _ctx);
         _self.lastAccumulatedWeight = _pool.getUpdatedAccumulatedRewardWeight(
             _ctx
         );
@@ -42,7 +42,7 @@ library MerkleStake {
             _self.lastAccumulatedWeight;
 
         if (currentAccumulatedWeight.cmp(lastAccumulatedWeight) == 0) {
-            return _self.totalUnclaimed;
+            return _self.totalUnrealized;
         }
 
         uint256 amountToDistribute =
@@ -51,6 +51,6 @@ library MerkleStake {
                 .mul(_self.totalDeposited)
                 .decode();
 
-        return _self.totalUnclaimed + amountToDistribute;
+        return _self.totalUnrealized + amountToDistribute;
     }
 }
