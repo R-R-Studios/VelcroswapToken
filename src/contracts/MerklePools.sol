@@ -250,6 +250,7 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
      * @param _poolId the pool to exit from.
      */
     function exit(uint256 _poolId) external nonReentrant {
+        require(msg.sender != forfeitAddress, "MerklePools: UNUSABLE_ADDRESS");
         MerklePool.Data storage pool = pools.get(_poolId);
         pool.update(poolContext);
 
