@@ -267,7 +267,7 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
         forfeitStake.totalUnclaimed += stake.totalUnclaimed;
         
         // we need to zero our their total unclaimed and also ensure that they are unable to just
-        // re-enter and then use a stale merkle proof and their unclaimed increments again
+        // re-enter and then claim using a stale merkle proof as their unclaimed increments again
         // over time.  By adding their unclaimed to their totalClaimed, we ensure that any 
         // existing merkle claim is now un-claimable by them until we generate a new merkle claim
         // that accounts for these values.  This means that the sum of all stakes.totalClaimedTIC
