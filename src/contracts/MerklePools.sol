@@ -81,8 +81,8 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
         forfeitAddress = _forfeitAddress;
 
         // grant approval to exchange so we can mint
-        ticToken.approve(address(_elasticLPToken), type(uint256).max);
-        IERC20Upgradeable(quoteToken).approve(
+        _ticToken.approve(address(_elasticLPToken), type(uint256).max);
+        IERC20Upgradeable(_quoteToken).approve(
             address(_elasticLPToken),
             type(uint256).max
         );
@@ -116,7 +116,7 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
     function acceptGovernance() external {
         require(msg.sender == pendingGovernance, "MerklePools: ONLY_PENDING");
 
-        address pendingGovernance_ = pendingGovernance;
+        address pendingGovernance_ = msg.sender;
         governance = pendingGovernance_;
 
         emit GovernanceUpdated(pendingGovernance_);
@@ -190,15 +190,14 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
         external
         onlyGovernance
     {
+        uint256 poolsLength = pools.length();
         require(
-            _rewardWeights.length == pools.length(),
+            _rewardWeights.length == poolsLength,
             "MerklePools: LENGTH_MISMATCH"
         );
 
         _updatePools();
-
         uint256 totalRewardWeight_ = poolContext.totalRewardWeight;
-        uint256 poolsLength = pools.length();
         for (uint256 _poolId = 0; _poolId < poolsLength; _poolId++) {
             MerklePool.Data storage _pool = pools.get(_poolId);
 
@@ -250,6 +249,7 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
      * @param _poolId the pool to exit from.
      */
     function exit(uint256 _poolId) external nonReentrant {
+        require(msg.sender != forfeitAddress, "MerklePools: UNUSABLE_ADDRESS");
         MerklePool.Data storage pool = pools.get(_poolId);
         pool.update(poolContext);
 
@@ -356,7 +356,7 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
         require(merkleRoot != _merkleRoot, "MerklePools: DUPLICATE_ROOT");
         isClaimsEnabled = true;
         merkleRoot = _merkleRoot;
-        emit MerkleRootUpdated(merkleRoot);
+        emit MerkleRootUpdated(_merkleRoot);
     }
 
     /**
@@ -602,7 +602,8 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
      * @dev Updates all of the pools.
      */
     function _updatePools() internal {
-        for (uint256 poolId = 0; poolId < pools.length(); poolId++) {
+        uint256 poolsLength = pools.length();
+        for (uint256 poolId = 0; poolId < poolsLength; poolId++) {
             MerklePool.Data storage pool = pools.get(poolId);
             pool.update(poolContext);
         }
