@@ -11,6 +11,8 @@ deployed commit [653d1e6](https://github.com/ElasticSwap/token/tree/653d1e687454
 
 ### MerklePools
 
+deploy commit [3b38a12](https://github.com/ElasticSwap/token/commit/3b38a12a9a53350427da85bd1d4f372bf2fa8749)
+
 - [Proxy](https://snowtrace.io/address/0x9b7b70f65ea5266ebd0a0f8435be832d39e71280) - 0x9b7b70f65ea5266ebd0a0f8435be832d39e71280
 - [PoxyAdmin](https://snowtrace.io/address/0x9368a7d3a59861b528a2528725d55479f02ae135) - 0x9368a7d3a59861b528a2528725d55479f02ae135
 - [Implementation](https://snowtrace.io/address/0xbe443274808af7f6daec7ad8ddf39f94f1603246) - 0xbe443274808af7f6daec7ad8ddf39f94f1603246
