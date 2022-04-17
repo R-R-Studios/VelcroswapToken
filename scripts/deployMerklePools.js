@@ -2,10 +2,6 @@ require("dotenv").config();
 const {ethers, getNamedAccounts, upgrades } = require("hardhat");
 
 
-
-/**
- * Script to create pool for sushi
- */
 async function main () {
   accounts = await ethers.getSigners();
   const { governance, tic, usdc, ticUsdcELP } = await getNamedAccounts();

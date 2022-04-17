@@ -9,6 +9,12 @@ deployed commit [653d1e6](https://github.com/ElasticSwap/token/tree/653d1e687454
 - [TIME Token Team](https://snowtrace.io/address/0x31fa86c83aE739220CE4fa93391BB321cC77670E) - 0x31fa86c83aE739220CE4fa93391BB321cC77670E
 - [TIME Token PreSeed](https://snowtrace.io/address/0x65C8CB3AFF7021c9A1579787e29B1c3D24c5cA59) - 0x65C8CB3AFF7021c9A1579787e29B1c3D24c5cA59
 
+### MerklePools
+
+- [Proxy](https://snowtrace.io/address/0x9b7b70f65ea5266ebd0a0f8435be832d39e71280) - 0x9b7b70f65ea5266ebd0a0f8435be832d39e71280
+- [PoxyAdmin](https://snowtrace.io/address/0x9368a7d3a59861b528a2528725d55479f02ae135) - 0x9368a7d3a59861b528a2528725d55479f02ae135
+- [Implementation](https://snowtrace.io/address/0xbe443274808af7f6daec7ad8ddf39f94f1603246) - 0xbe443274808af7f6daec7ad8ddf39f94f1603246
+
 ### Mainnet deployment instructions
 1. Update .env file for correct keys and addresses.
 1. Update desired gas price in hardhat (https://snowtrace.io/gastracker)
@@ -42,10 +48,7 @@ deployed commit [653d1e6](https://github.com/ElasticSwap/token/tree/653d1e687454
 
 1. update HH config with correct address for USDC<>TIC ELP address
 1. Confirm the AVAX governance address
-1. Confirm HH config deploy is set to `deploy/merklePools` for AVAX
 1. Set the correct desired gasPrice in HH config
-1. `npx hardhat deploy --network avalanche`
-1. `npx hardhat --network avalanche etherscan-verify --api-key <APIKEY>`
-1. Transfer governance of MerklePools.sol
+1. `HARDHAT_NETWORK="avalanche" node scripts/deployMerklePools.js`
 1. Transfer ownership of the proxy admin
 1. Create pools

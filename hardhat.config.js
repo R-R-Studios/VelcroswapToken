@@ -48,7 +48,7 @@ module.exports = {
     avalanche: {
       deploy: ["deploy"],
       url: "https://api.avax.network/ext/bc/C/rpc",
-      gasPrice: 50000000000, // 58 nAVAX (10e9)
+      gasPrice: 80000000000, // 58 nAVAX (10e9)
       chainId: 43114,
       accounts:
         process.env.AVAX_PRIVATE_KEY !== undefined
@@ -92,8 +92,8 @@ module.exports = {
       avalanche: "0xa7d7079b0fead91f3e65f86e8915cb59c1a4c664"
     },
     ticUsdcELP: {
-      fuji: "0xa7d7079b0fead91f3e65f86e8915cb59c1a4c664",     // FIXME!
-      avalanche: "0xa7d7079b0fead91f3e65f86e8915cb59c1a4c664" // FIXME!
+      fuji: "0x4ae1da57f2d6b2e9a23d07e264aa2b3bbcaed19a",     
+      avalanche: "0x4ae1da57f2d6b2e9a23d07e264aa2b3bbcaed19a"
     }
   },
   contractSizer: {
