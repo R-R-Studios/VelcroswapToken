@@ -345,7 +345,7 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
         uint256 _ticTokenQtyMin,
         uint256 _quoteTokenQtyMin,
         uint256 _expirationTimestamp
-    ) external onlyGovernance {
+    ) external virtual onlyGovernance {
         require(address(ticToken) != address(0), "MerklePools: TIC_NOT_SET");
         require(elasticLPToken != address(0), "MerklePools: ELP_NOT_SET");
 
