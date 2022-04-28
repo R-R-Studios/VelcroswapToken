@@ -5,6 +5,11 @@ import "./MerklePools.sol";
 import "../libraries/merklePools/MerklePool.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
+/**
+ * MerklePoolsForeign allows for us to enable our MerklePools staking on a chain that has bridged
+ * TIC.  Instead of minting during the `generateLPTokens` call, TIC is transferred in from 
+ * the caller (onlyGovernance) to be used to mint LP tokens.
+ */
 contract MerklePoolsForeign is MerklePools {
     using MerklePool for MerklePool.List;
     using MerklePool for MerklePool.Data;
@@ -37,10 +42,7 @@ contract MerklePoolsForeign is MerklePools {
             _pool.totalUnclaimedTIC - _pool.totalUnclaimedTICInLP;
         require(maxMintAmount >= _ticTokenQty, "MerklePools: NSF_UNCLAIMED");
 
-        // check to make sure we don't have some "Excess" tic we can use.
-        uint256 ticBalanceToBeMinted = _ticTokenQty - excessTICFromSlippage;
-
-        ticToken.transferFrom(msg.sender, address(this), ticBalanceToBeMinted);
+        ticToken.transferFrom(msg.sender, address(this), _ticTokenQty);
         IERC20Upgradeable(quoteToken).safeTransferFrom(
             msg.sender,
             address(this),
@@ -69,12 +71,17 @@ contract MerklePoolsForeign is MerklePools {
 
         uint256 ticBalanceConsumed =
             ticBalanceBefore - ticToken.balanceOf(address(this));
-        excessTICFromSlippage = _ticTokenQty - ticBalanceConsumed; //save for next time
-
         _pool.totalUnclaimedTICInLP += ticBalanceConsumed;
+
+        if (ticBalanceConsumed < _ticTokenQty) {
+            // refund the rest to caller.
+            ticToken.transfer(msg.sender, _ticTokenQty - ticBalanceConsumed);
+        }
+
         uint256 quoteTokenConsumed =
             quoteTokenBalanceBefore -
                 IERC20Upgradeable(quoteToken).balanceOf(address(this));
+
         if (quoteTokenConsumed < _quoteTokenQty) {
             // refund the rest to the caller
             IERC20Upgradeable(quoteToken).safeTransfer(

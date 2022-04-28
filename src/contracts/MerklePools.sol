@@ -184,7 +184,7 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
         external
         onlyGovernance
     {
-        require(elasticLPToken == address(0), "MerklePools: TIC_ALREADY_SET");
+        require(elasticLPToken == address(0), "MerklePools: ELP_ALREADY_SET");
         require(_elasticLPToken != address(0), "MerklePools: INVALID_ADDRESS");
 
         elasticLPToken = _elasticLPToken;
