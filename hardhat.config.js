@@ -55,6 +55,12 @@ module.exports = {
           ? [process.env.AVAX_PRIVATE_KEY]
           : [],
     },
+    mainnet: {
+      url: process.env.MAINNET_URL || "",
+      accounts:
+        process.env.MAINNET_PRIVATE_KEY !== undefined ? [process.env.MAINNET_PRIVATE_KEY] : [],
+      gasPrice: "auto"
+    },
   },
   paths: {
     deploy: ["deploy/core"],

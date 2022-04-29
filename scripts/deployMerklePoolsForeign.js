@@ -7,9 +7,9 @@ async function main () {
   const { governance, usdc } = await getNamedAccounts();
   const MerklePoolsForeign = await ethers.getContractFactory("MerklePoolsForeign");
   const merklePools = await upgrades.deployProxy(MerklePoolsForeign, [
-    ethers.constants.addressZero,
+    ethers.constants.AddressZero,
     usdc,
-    ethers.constants.addressZero,
+    ethers.constants.AddressZero,
     governance,
     governance
   ]);

@@ -9,13 +9,20 @@ deployed commit [653d1e6](https://github.com/ElasticSwap/token/tree/653d1e687454
 - [TIME Token Team](https://snowtrace.io/address/0x31fa86c83aE739220CE4fa93391BB321cC77670E) - 0x31fa86c83aE739220CE4fa93391BB321cC77670E
 - [TIME Token PreSeed](https://snowtrace.io/address/0x65C8CB3AFF7021c9A1579787e29B1c3D24c5cA59) - 0x65C8CB3AFF7021c9A1579787e29B1c3D24c5cA59
 
-### MerklePools
+### MerklePools (AVAX)
 
 deploy commit [3b38a12](https://github.com/ElasticSwap/token/commit/3b38a12a9a53350427da85bd1d4f372bf2fa8749)
 
 - [Proxy](https://snowtrace.io/address/0x9b7b70f65ea5266ebd0a0f8435be832d39e71280) - 0x9b7b70f65ea5266ebd0a0f8435be832d39e71280
 - [PoxyAdmin](https://snowtrace.io/address/0x9368a7d3a59861b528a2528725d55479f02ae135) - 0x9368a7d3a59861b528a2528725d55479f02ae135
 - [Implementation](https://snowtrace.io/address/0xbe443274808af7f6daec7ad8ddf39f94f1603246) - 0xbe443274808af7f6daec7ad8ddf39f94f1603246
+
+### MerklePoolsForeign (Mainnet)
+
+- [Proxy](https://etherscan.io/address/0xc8d00c0a8d2ec4ec538a82461a7a7f5c3ac99d95) - 0xc8d00c0a8d2ec4ec538a82461a7a7f5c3ac99d95
+- [PoxyAdmin](https://etherscan.io/address/0xbce91a72a03966d27edab52490a5749da5ae916f) - 0xbce91a72a03966d27edab52490a5749da5ae916f
+- [Implementation](https://etherscan.io/address/0x0e5ba9a39A75e6AFdBCFFB422Fda80497F80a88c) - 0x0e5ba9a39A75e6AFdBCFFB422Fda80497F80a88c
+
 
 ### Mainnet deployment instructions
 1. Update .env file for correct keys and addresses.
