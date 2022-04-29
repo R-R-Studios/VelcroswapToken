@@ -7,7 +7,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 
 /**
  * MerklePoolsForeign allows for us to enable our MerklePools staking on a chain that has bridged
- * TIC.  Instead of minting during the `generateLPTokens` call, TIC is transferred in from 
+ * TIC.  Instead of minting during the `generateLPTokens` call, TIC is transferred in from
  * the caller (onlyGovernance) to be used to mint LP tokens.
  */
 contract MerklePoolsForeign is MerklePools {

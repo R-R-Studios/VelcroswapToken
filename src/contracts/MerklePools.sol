@@ -169,6 +169,7 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
             address(_ticToken) != address(0),
             "MerklePools: INVALID_ADDRESS"
         );
+        require(elasticLPToken != address(0), "MerklePools: ELP_NOT_SET");
 
         ticToken = _ticToken;
         _ticToken.approve(address(elasticLPToken), type(uint256).max);
