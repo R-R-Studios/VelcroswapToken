@@ -97,6 +97,7 @@ module.exports = {
       fuji: "0x6275b63a4ee560004c34431e573314426906cee9",
       avalanche: "0xa7d7079b0fead91f3e65f86e8915cb59c1a4c664",
       mainnet: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      goerli: "0x4ce0c837C97CA396FE497D331E78B57CD55f15Fc",
     },
     ticUsdcELP: {
       fuji: "0x4ae1da57f2d6b2e9a23d07e264aa2b3bbcaed19a",

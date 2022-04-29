@@ -1,0 +1,328 @@
+{
+  "manifestVersion": "3.2",
+  "admin": {
+    "address": "0x2a3753f6cFBD1EbA1fF1CB2cE3d041057236503f",
+    "txHash": "0xc1a57d2d1c2b8a52dd0c4091b4bcb5ae46b185a3848d097a78b0a9efca2b7682"
+  },
+  "proxies": [
+    {
+      "address": "0xBe62889d7bbb98415123D76D3D862E4482463e52",
+      "txHash": "0x9c0d54f441cf1f6efbe3420914652dd5d5f726ef0c49960e41e488e1dcbc3e05",
+      "kind": "transparent"
+    }
+  ],
+  "impls": {
+    "b0e3f85153eec866281fd0adc73f4d60e3312ab02d4abd9a765c052ed593821c": {
+      "address": "0xBd94C4308b02C49295Ff33314E6dFfe8D19071EA",
+      "txHash": "0x06370beb1db2eed8b0519676435f55dcfa11ef43f0eed0c40800afacdff91f15",
+      "layout": {
+        "storage": [
+          {
+            "label": "ticToken",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IMintableERC20)7634",
+            "contract": "MerklePoolsStorage",
+            "src": "src/contracts/MerklePoolsStorage.sol:13"
+          },
+          {
+            "label": "excessTICFromSlippage",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_uint256",
+            "contract": "MerklePoolsStorage",
+            "src": "src/contracts/MerklePoolsStorage.sol:14"
+          },
+          {
+            "label": "quoteToken",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_address",
+            "contract": "MerklePoolsStorage",
+            "src": "src/contracts/MerklePoolsStorage.sol:16"
+          },
+          {
+            "label": "elasticLPToken",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "MerklePoolsStorage",
+            "src": "src/contracts/MerklePoolsStorage.sol:17"
+          },
+          {
+            "label": "governance",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_address",
+            "contract": "MerklePoolsStorage",
+            "src": "src/contracts/MerklePoolsStorage.sol:18"
+          },
+          {
+            "label": "pendingGovernance",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_address",
+            "contract": "MerklePoolsStorage",
+            "src": "src/contracts/MerklePoolsStorage.sol:19"
+          },
+          {
+            "label": "forfeitAddress",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_address",
+            "contract": "MerklePoolsStorage",
+            "src": "src/contracts/MerklePoolsStorage.sol:20"
+          },
+          {
+            "label": "merkleRoot",
+            "offset": 0,
+            "slot": "7",
+            "type": "t_bytes32",
+            "contract": "MerklePoolsStorage",
+            "src": "src/contracts/MerklePoolsStorage.sol:22"
+          },
+          {
+            "label": "isClaimsEnabled",
+            "offset": 0,
+            "slot": "8",
+            "type": "t_bool",
+            "contract": "MerklePoolsStorage",
+            "src": "src/contracts/MerklePoolsStorage.sol:23"
+          },
+          {
+            "label": "tokenPoolIds",
+            "offset": 0,
+            "slot": "9",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "MerklePoolsStorage",
+            "src": "src/contracts/MerklePoolsStorage.sol:27"
+          },
+          {
+            "label": "poolContext",
+            "offset": 0,
+            "slot": "10",
+            "type": "t_struct(Context)7933_storage",
+            "contract": "MerklePoolsStorage",
+            "src": "src/contracts/MerklePoolsStorage.sol:29"
+          },
+          {
+            "label": "pools",
+            "offset": 0,
+            "slot": "12",
+            "type": "t_struct(List)7954_storage",
+            "contract": "MerklePoolsStorage",
+            "src": "src/contracts/MerklePoolsStorage.sol:30"
+          },
+          {
+            "label": "stakes",
+            "offset": 0,
+            "slot": "13",
+            "type": "t_mapping(t_address,t_mapping(t_uint256,t_struct(Data)8272_storage))",
+            "contract": "MerklePoolsStorage",
+            "src": "src/contracts/MerklePoolsStorage.sol:33"
+          },
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "14",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:39"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "14",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:44"
+          },
+          {
+            "label": "_status",
+            "offset": 0,
+            "slot": "15",
+            "type": "t_uint256",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:38"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "16",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:74"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_struct(Data)7949_storage)dyn_storage": {
+            "label": "struct MerklePool.Data[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_contract(IMintableERC20)7634": {
+            "label": "contract IMintableERC20",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_mapping(t_uint256,t_struct(Data)8272_storage))": {
+            "label": "mapping(address => mapping(uint256 => struct MerkleStake.Data))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_struct(Data)8272_storage)": {
+            "label": "mapping(uint256 => struct MerkleStake.Data)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Context)7933_storage": {
+            "label": "struct MerklePool.Context",
+            "members": [
+              {
+                "label": "rewardRate",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "totalRewardWeight",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_struct(Data)7949_storage": {
+            "label": "struct MerklePool.Data",
+            "members": [
+              {
+                "label": "token",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "totalDeposited",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "totalUnclaimedTIC",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "totalUnclaimedTICInLP",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "rewardWeight",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "accumulatedRewardWeight",
+                "type": "t_struct(FixedDecimal)7647_storage",
+                "offset": 0,
+                "slot": "5"
+              },
+              {
+                "label": "lastUpdatedBlockTimestamp",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "6"
+              }
+            ],
+            "numberOfBytes": "224"
+          },
+          "t_struct(Data)8272_storage": {
+            "label": "struct MerkleStake.Data",
+            "members": [
+              {
+                "label": "totalDeposited",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "totalUnrealized",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "totalRealizedTIC",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "totalRealizedLP",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "lastAccumulatedWeight",
+                "type": "t_struct(FixedDecimal)7647_storage",
+                "offset": 0,
+                "slot": "4"
+              }
+            ],
+            "numberOfBytes": "160"
+          },
+          "t_struct(FixedDecimal)7647_storage": {
+            "label": "struct FixedPointMath.FixedDecimal",
+            "members": [
+              {
+                "label": "x",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(List)7954_storage": {
+            "label": "struct MerklePool.List",
+            "members": [
+              {
+                "label": "elements",
+                "type": "t_array(t_struct(Data)7949_storage)dyn_storage",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        }
+      }
+    }
+  }
+}

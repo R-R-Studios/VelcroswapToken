@@ -24,6 +24,13 @@ deploy commit [23cfc6e](https://github.com/ElasticSwap/token/tree/23cfc6efd51bb0
 - [PoxyAdmin](https://etherscan.io/address/0xbce91a72a03966d27edab52490a5749da5ae916f) - 0xbce91a72a03966d27edab52490a5749da5ae916f
 - [Implementation](https://etherscan.io/address/0x0e5ba9a39A75e6AFdBCFFB422Fda80497F80a88c) - 0x0e5ba9a39A75e6AFdBCFFB422Fda80497F80a88c
 
+### MerklePoolsForeign (Goerli)
+
+deploy commit [23cfc6e](https://github.com/ElasticSwap/token/tree/23cfc6efd51bb04b8daf55f97bedd21e7bf66d5a)
+- [Proxy](https://goerli.etherscan.io/address/0xbe62889d7bbb98415123d76d3d862e4482463e52) - 0xbe62889d7bbb98415123d76d3d862e4482463e52
+- [PoxyAdmin](https://goerli.etherscan.io/address/0x2a3753f6cfbd1eba1ff1cb2ce3d041057236503f) - 0x2a3753f6cfbd1eba1ff1cb2ce3d041057236503f
+- [Implementation](https://goerli.etherscan.io/address/0xbd94c4308b02c49295ff33314e6dffe8d19071ea) - 0xbd94c4308b02c49295ff33314e6dffe8d19071ea
+
 
 ### Mainnet deployment instructions
 1. Update .env file for correct keys and addresses.
