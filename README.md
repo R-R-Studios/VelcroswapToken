@@ -19,6 +19,7 @@ deploy commit [3b38a12](https://github.com/ElasticSwap/token/commit/3b38a12a9a53
 
 ### MerklePoolsForeign (Mainnet)
 
+deploy commit [23cfc6e](https://github.com/ElasticSwap/token/tree/23cfc6efd51bb04b8daf55f97bedd21e7bf66d5a)
 - [Proxy](https://etherscan.io/address/0xc8d00c0a8d2ec4ec538a82461a7a7f5c3ac99d95) - 0xc8d00c0a8d2ec4ec538a82461a7a7f5c3ac99d95
 - [PoxyAdmin](https://etherscan.io/address/0xbce91a72a03966d27edab52490a5749da5ae916f) - 0xbce91a72a03966d27edab52490a5749da5ae916f
 - [Implementation](https://etherscan.io/address/0x0e5ba9a39A75e6AFdBCFFB422Fda80497F80a88c) - 0x0e5ba9a39A75e6AFdBCFFB422Fda80497F80a88c
