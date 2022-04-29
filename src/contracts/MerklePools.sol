@@ -80,12 +80,16 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
         quoteToken = _quoteToken;
         forfeitAddress = _forfeitAddress;
 
-        // grant approval to exchange so we can mint
-        _ticToken.approve(address(_elasticLPToken), type(uint256).max);
-        IERC20Upgradeable(_quoteToken).approve(
-            address(_elasticLPToken),
-            type(uint256).max
-        );
+        if (address(_ticToken) != address(0)) {
+            // grant approval to exchange so we can mint
+            _ticToken.approve(address(_elasticLPToken), type(uint256).max);
+        }
+        if (_elasticLPToken != address(0)) {
+            IERC20Upgradeable(_quoteToken).approve(
+                address(_elasticLPToken),
+                type(uint256).max
+            );
+        }
     }
 
     /**
@@ -146,6 +150,49 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
         require(_forfeitAddress != forfeitAddress, "MerklePools: SAME_ADDRESS");
         forfeitAddress = _forfeitAddress;
         emit ForfeitAddressUpdated(_forfeitAddress);
+    }
+
+    /**
+     * Allows the governance to set the tic token address in the case
+     * that it wasn't set during the initialize (due to bridge partner)
+     * @param _ticToken address
+     */
+    function setTicTokenAddress(IMintableERC20 _ticToken)
+        external
+        onlyGovernance
+    {
+        require(
+            address(ticToken) == address(0),
+            "MerklePools: TIC_ALREADY_SET"
+        );
+        require(
+            address(_ticToken) != address(0),
+            "MerklePools: INVALID_ADDRESS"
+        );
+        require(elasticLPToken != address(0), "MerklePools: ELP_NOT_SET");
+
+        ticToken = _ticToken;
+        _ticToken.approve(address(elasticLPToken), type(uint256).max);
+    }
+
+    /**
+     * Allows the governance to set the Elastic LP token address in the case
+     * that it wasn't set during the initialize due to waiting on the ELP to be
+     * created once the token is bridged
+     * @param _elasticLPToken address
+     */
+    function setElasticLPTokenAddress(address _elasticLPToken)
+        external
+        onlyGovernance
+    {
+        require(elasticLPToken == address(0), "MerklePools: ELP_ALREADY_SET");
+        require(_elasticLPToken != address(0), "MerklePools: INVALID_ADDRESS");
+
+        elasticLPToken = _elasticLPToken;
+        IERC20Upgradeable(quoteToken).approve(
+            address(_elasticLPToken),
+            type(uint256).max
+        );
     }
 
     /**
@@ -265,19 +312,18 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
         forfeitStake.update(pool, poolContext);
 
         forfeitStake.totalUnrealized += stake.totalUnrealized;
-        
+
         // we need to zero our their total unrealized and also ensure that they are unable to just
         // re-enter and then claim using a stale merkle proof as their unrealized increments again
-        // over time.  By adding their unrealized to their totalRealized, we ensure that any 
+        // over time.  By adding their unrealized to their totalRealized, we ensure that any
         // existing merkle claim is now un-claimable by them until we generate a new merkle claim
         // that accounts for these values.  This means that the sum of all stakes.totalRealizedTIC
-        // is not accurate in terms of tic claimed 
+        // is not accurate in terms of tic claimed
         // and that we also need to check in the UI to not end up with negative
-        // claimable values.  The off chain accounting needs to consider this as well if a 
-        // user does re-enter wit the same address in the future. 
-        stake.totalRealizedTIC += stake.totalUnrealized; 
+        // claimable values.  The off chain accounting needs to consider this as well if a
+        // user does re-enter wit the same address in the future.
+        stake.totalRealizedTIC += stake.totalUnrealized;
         stake.totalUnrealized = 0;
-        
 
         IERC20Upgradeable(pool.token).safeTransfer(msg.sender, withdrawAmount);
         emit TokensWithdrawn(msg.sender, _poolId, withdrawAmount);
@@ -300,7 +346,10 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
         uint256 _ticTokenQtyMin,
         uint256 _quoteTokenQtyMin,
         uint256 _expirationTimestamp
-    ) external onlyGovernance {
+    ) external virtual onlyGovernance {
+        require(address(ticToken) != address(0), "MerklePools: TIC_NOT_SET");
+        require(elasticLPToken != address(0), "MerklePools: ELP_NOT_SET");
+
         MerklePool.Data storage _pool = pools.get(_poolId);
         _pool.update(poolContext); // update pool first!
         uint256 maxMintAmount =
@@ -366,6 +415,8 @@ contract MerklePools is MerklePoolsStorage, ReentrancyGuardUpgradeable {
      */
     function setMerkleRoot(bytes32 _merkleRoot) public onlyGovernance {
         require(merkleRoot != _merkleRoot, "MerklePools: DUPLICATE_ROOT");
+        require(address(ticToken) != address(0), "MerklePools: TIC_NOT_SET");
+        require(elasticLPToken != address(0), "MerklePools: ELP_NOT_SET");
         isClaimsEnabled = true;
         merkleRoot = _merkleRoot;
         emit MerkleRootUpdated(_merkleRoot);
